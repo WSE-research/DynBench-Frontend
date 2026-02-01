@@ -16,7 +16,6 @@ jobs:
       - name: Build the Docker image for deployment
         run: >
           docker build --tag "$DOCKER_IMAGE_NAME:latest" .
-      - name: Tag image with specific version
       - name: Docker Login
         uses: docker/login-action@v2
         with:
