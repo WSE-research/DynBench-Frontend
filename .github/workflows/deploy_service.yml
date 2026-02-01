@@ -1,0 +1,33 @@
+name: Docker Image CI
+
+env:
+  DOCKER_IMAGE_NAME: wseresearch/dynbench-frontend
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build the Docker image for deployment
+        run: >
+          docker build --tag "$DOCKER_IMAGE_NAME:latest" .
+      - name: Tag image with specific version
+      - name: Docker Login
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push docker image with latest version
+        run: docker push "$DOCKER_IMAGE_NAME:latest"
+      - name: Update service
+        uses: MindMaster98/docker-service-updater@v0.1.5
+        with:
+          api_key: ${{ secrets.UPDATER_KEY }}
+          updater_host: ${{ secrets.UPDATER_HOST }}
+          config_file: "service_config/service_config.json"
+          setup_path: "service_config"
