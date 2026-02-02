@@ -12,4 +12,4 @@ COPY . /app
 WORKDIR /app
 
 # ENTRYPOINT streamlit run server.py --server.address=0.0.0.0
-CMD ["streamlit", "run", "server.py", "--server.address", "0.0.0.0"]
+CMD ["streamlit", "run", "server.py", "--server.address", "0.0.0.0", "--server.port", "8502"]
