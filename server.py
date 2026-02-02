@@ -37,7 +37,7 @@ def call_dynbench(url, question, query, model, complexity='normal', language='en
         return None
 
 
-config = Config(RepositoryEnv('.env'))
+config = Config(RepositoryEnv('config.env'))
 
 if 'bearer' not in st.session_state:
     print(config('DYNBENCH'))
