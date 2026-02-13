@@ -3,6 +3,13 @@ List of languages by number of speakers in Europe
 
 [cols="1,2,1,2,2"]
 |===
+
+| Position
+| Language
+| Code
+| Native speakers
+| Total speakers
+
 | 1
 | Russian
 | ru
