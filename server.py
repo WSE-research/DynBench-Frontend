@@ -16,6 +16,21 @@ LANGUAGES = {
     'French':  'fr',
     'Russian': 'ru',
     'Ukrainian': 'uk',
+    'Italian': 'it',
+    'Spanish': 'es',
+    'Polish': 'pl',
+    'Romanian': 'ro',
+    'Dutch': 'nl',
+    'Turkish': 'tr',
+    'Bavarian': 'bar',
+    'Portuguese': 'pt',
+    'Hungarian': 'hu',
+    'Greek': 'el',
+    'Czech': 'cs',
+    'Swedish': 'sv',
+    'Catalan': 'ca',
+    'Serbian': 'sr',
+    'Bulgarian': 'bg',
 }
 
 VALUES = [
