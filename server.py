@@ -1,7 +1,14 @@
-import streamlit as st
 import requests
 from decouple import Config, RepositoryEnv
 
+import streamlit as st
+
+from PIL import Image
+import base64
+
+
+PAGE_TITLE = 'DynBench: robust benchmark records generator'
+PAGE_IMAGE = 'images/dynbench.png'
 
 LANGUAGES = {
     'English': 'en',
@@ -40,23 +47,41 @@ def call_dynbench(url, question, query, model, complexity='normal', language='en
 config = Config(RepositoryEnv('config.env'))
 
 if 'bearer' not in st.session_state:
-    print(config('DYNBENCH'))
     st.session_state.dynbench = config('DYNBENCH')
 
-st.set_page_config(layout="wide")
+
+st.set_page_config(
+    layout="wide",
+    page_title=PAGE_TITLE,
+    # page_icon=Image.open(PAGE_ICON)
+)
 
 # --- Sidebar ---
-st.sidebar.title("Settings")
+with st.sidebar:
+    with open(PAGE_IMAGE, "rb") as f:
+    # Read the optional file VERSION.txt containing version number
 
-difficulty = st.sidebar.radio(
-    "Select difficulty:",
-    ["easy", "normal", "hard", "random"],
-)
+        image_data = base64.b64encode(f.read()).decode("utf-8")
+        st.sidebar.markdown(
+            f"""
+            <div style="display:table;margin-top:-10%;margin-bottom:15%;margin-left:auto;margin-right:auto;text-align:center">
+                <img src="data:image/png;base64,{image_data}" class="app_logo"></a>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-language = st.sidebar.radio(
-    "Select language:",
-    list(LANGUAGES),
-)
+    st.title("Settings")
+
+    difficulty = st.radio(
+        "Select difficulty:",
+        ["easy", "normal", "hard", "random"],
+    )
+
+    language = st.radio(
+        "Select language:",
+        list(LANGUAGES),
+    )
 
 # --- Main panel ---
 st.title("Generate new question-query pair")
