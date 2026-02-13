@@ -1,0 +1,126 @@
+List of languages by number of speakers in Europe 
+(top 20 from https://en.wikipedia.org/wiki/List_of_languages_by_number_of_speakers_in_Europe)
+
+[cols="1,2,1,2,2"]
+|===
+| 1
+| Russian
+| ru
+| 106,000,000
+| 160,000,000
+
+| 2
+| German
+| de
+| 85,000,000
+| 130,000,000
+
+| 3
+| French
+| fr
+| 67,000,000
+| 112,000,000
+
+| 4
+| English
+| en
+| 67,000,000
+| 280,000,000
+
+| 5
+| Italian
+| it
+| 58,000,000
+| 72,000,000
+
+| 6
+| Spanish
+| es
+| 40,000,000
+| 76,000,000
+
+| 7
+| Polish
+| pl
+| 38,000,000
+|
+
+| 8
+| Ukrainian
+| uk
+| 32,600,000
+|
+
+| 9
+| Romanian
+| ro
+| 24,000,000
+| 28,000,000
+
+| 10
+| Dutch
+| nl
+| 22,000,000
+| 24,000,000
+
+| 11
+| Turkish
+| tr
+| 15,752,673
+|
+
+| 12
+| Bavarian
+| bar
+| 14,000,000
+| 
+
+| 13
+| Portuguese
+| pt
+| 11,000,000
+|
+
+| 14
+| Hungarian
+| hu
+| 11,000,000
+|
+
+| 15
+| Greek
+| el
+| 11,000,000
+|
+
+| 16
+| Czech
+| cs
+| 10,600,000
+|
+
+| 17
+| Swedish
+| sv
+| 10,000,000
+| 11,000,000
+
+| 18
+| Catalan
+| ca
+| 10,000,000
+|
+
+| 19
+| Serbian
+| sr
+| 9,000,000
+|
+
+| 20
+| Bulgarian
+| bg
+| 7,800,000
+|
+
+|===
