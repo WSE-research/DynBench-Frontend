@@ -49,6 +49,7 @@ def call_dynbench(url, question, query, model, complexity='normal', language='en
         'model': model,
         'lang': language,
         'complexity': complexity,
+        'checks': ['sentence']
     }
 
     r = requests.post(url, headers=headers, json=data)
@@ -121,7 +122,7 @@ if submit:
     print(question)
     print(query)
 
-    r = call_dynbench(st.session_state.dynbench, question, query, 'gpt-4o', difficulty, LANGUAGES[language])
+    r = call_dynbench(st.session_state.dynbench, question, query, 'gpt-4o', difficulty, LANGUAGES[language], )
     # r = call_dynbench(st.session_state.dynbench, question, query, 'mistral-small')
 
     if r:
