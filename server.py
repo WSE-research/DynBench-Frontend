@@ -3,6 +3,7 @@ import requests
 from decouple import Config, RepositoryEnv
 
 import streamlit as st
+from streamlit.components.v1 import html
 
 from PIL import Image
 import base64
@@ -77,6 +78,9 @@ st.set_page_config(
     # page_icon=Image.open(PAGE_ICON)
 )
 
+with open("css/style_menu_logo.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 # --- Sidebar ---
 with st.sidebar:
     with open(PAGE_IMAGE, "rb") as f:
@@ -144,5 +148,7 @@ if submit:
     else:
         st.text('No question-query generated')
 
-
+with open("js/change_menu.js", "r") as f:
+    javascript = f.read()
+    html(f"<script style='display:none'>{javascript}</script>")
 
