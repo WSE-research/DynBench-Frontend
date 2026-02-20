@@ -1,3 +1,4 @@
+import os
 import requests
 from decouple import Config, RepositoryEnv
 
@@ -6,6 +7,10 @@ import streamlit as st
 from PIL import Image
 import base64
 
+from decouple import config
+
+
+GITHUB_REPO = config('GITHUB_REPO', 'https://github.com/WSE-research/DynBench-Frontend.git')
 
 PAGE_TITLE = 'DynBench: robust benchmark records generator'
 PAGE_IMAGE = 'images/dynbench.png'
@@ -76,12 +81,18 @@ st.set_page_config(
 with st.sidebar:
     with open(PAGE_IMAGE, "rb") as f:
     # Read the optional file VERSION.txt containing version number
+        version = ""
+        version_long = ""
+        if os.path.exists("VERSION.txt"):
+            with open("VERSION.txt", "r") as version_file:
+                version = version_file.read().strip()
+                version_long = ", current version " + version 
 
         image_data = base64.b64encode(f.read()).decode("utf-8")
         st.sidebar.markdown(
             f"""
             <div style="display:table;margin-top:-10%;margin-bottom:15%;margin-left:auto;margin-right:auto;text-align:center">
-                <img src="data:image/png;base64,{image_data}" class="app_logo"></a>
+                <a href="{GITHUB_REPO}" title="go to GitHub repository{version_long}"><img src="data:image/png;base64,{image_data}" class="app_logo"></a>
             </div>
             """,
             unsafe_allow_html=True,
