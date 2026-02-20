@@ -13,66 +13,70 @@ import base64
 from decouple import config
 
 handler = colorlog.StreamHandler()
-handler.setFormatter(colorlog.ColoredFormatter(
-    "%(log_color)s%(asctime)s %(levelname)-8s%(reset)s %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    log_colors={
-        "DEBUG":    "cyan",
-        "INFO":     "green",
-        "WARNING":  "yellow",
-        "ERROR":    "red",
-        "CRITICAL": "bold_red",
-    },
-))
+handler.setFormatter(
+    colorlog.ColoredFormatter(
+        "%(log_color)s%(asctime)s %(levelname)-8s%(reset)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        log_colors={
+            "DEBUG": "cyan",
+            "INFO": "green",
+            "WARNING": "yellow",
+            "ERROR": "red",
+            "CRITICAL": "bold_red",
+        },
+    )
+)
 logging.basicConfig(level=logging.INFO, handlers=[handler])
 logger = logging.getLogger(__name__)
 
 
-GITHUB_REPO = config('GITHUB_REPO', 'https://github.com/WSE-research/DynBench-Frontend.git')
+GITHUB_REPO = config(
+    "GITHUB_REPO", "https://github.com/WSE-research/DynBench-Frontend.git"
+)
 
-PAGE_TITLE = 'DynBench: robust benchmark records generator'
-PAGE_IMAGE = 'images/dynbench.png'
+PAGE_TITLE = "DynBench: robust benchmark records generator"
+PAGE_IMAGE = "images/dynbench.png"
 
 LANGUAGES = {
-    'English': 'en',
-    'German':  'de',
-    'French':  'fr',
-    'Russian': 'ru',
-    'Ukrainian': 'uk',
-    'Italian': 'it',
-    'Spanish': 'es',
-    'Polish': 'pl',
-    'Romanian': 'ro',
-    'Dutch': 'nl',
-    'Turkish': 'tr',
-    'Bavarian': 'bar',
-    'Portuguese': 'pt',
-    'Hungarian': 'hu',
-    'Greek': 'el',
-    'Czech': 'cs',
-    'Swedish': 'sv',
-    'Catalan': 'ca',
-    'Serbian': 'sr',
-    'Bulgarian': 'bg',
+    "English": "en",
+    "German": "de",
+    "French": "fr",
+    "Russian": "ru",
+    "Ukrainian": "uk",
+    "Italian": "it",
+    "Spanish": "es",
+    "Polish": "pl",
+    "Romanian": "ro",
+    "Dutch": "nl",
+    "Turkish": "tr",
+    "Bavarian": "bar",
+    "Portuguese": "pt",
+    "Hungarian": "hu",
+    "Greek": "el",
+    "Czech": "cs",
+    "Swedish": "sv",
+    "Catalan": "ca",
+    "Serbian": "sr",
+    "Bulgarian": "bg",
 }
 
 VALUES = [
     {
-        'question': 'What is the highest mountain in Germany?',
-        'query': 'SELECT ?uri WHERE { ?uri wdt:P31 wd:Q8502 ; wdt:P2044 ?elevation ; wdt:P17 wd:Q183 . } ORDER BY DESC(?elevation) LIMIT 1',
+        "question": "What is the highest mountain in Germany?",
+        "query": "SELECT ?uri WHERE { ?uri wdt:P31 wd:Q8502 ; wdt:P2044 ?elevation ; wdt:P17 wd:Q183 . } ORDER BY DESC(?elevation) LIMIT 1",
     },
 ]
 
 
-def call_dynbench(url, question, query, model, complexity='normal', language='en'):
+def call_dynbench(url, question, query, model, complexity="normal", language="en"):
     headers = {}
     data = {
-        'question': question,
-        'query': query,
-        'model': model,
-        'lang': language,
-        'complexity': complexity,
-        'checks': ['sentence']
+        "question": question,
+        "query": query,
+        "model": model,
+        "lang": language,
+        "complexity": complexity,
+        "checks": ["sentence"],
     }
 
     r = requests.post(url, headers=headers, json=data)
@@ -83,10 +87,10 @@ def call_dynbench(url, question, query, model, complexity='normal', language='en
         return None
 
 
-config = Config(RepositoryEnv('config.env'))
+config = Config(RepositoryEnv("config.env"))
 
-if 'bearer' not in st.session_state:
-    st.session_state.dynbench = config('DYNBENCH')
+if "bearer" not in st.session_state:
+    st.session_state.dynbench = config("DYNBENCH")
 
 
 st.set_page_config(
@@ -95,19 +99,19 @@ st.set_page_config(
     # page_icon=Image.open(PAGE_ICON)
 )
 
-with open("css/style_menu_logo.css") as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+with open("css/style_menu_logo.css") as f, open("css/style_github_ribbon.css") as g:
+    st.markdown(f"<style>{f.read()}{g.read()}</style>", unsafe_allow_html=True)
 
 # --- Sidebar ---
 with st.sidebar:
     with open(PAGE_IMAGE, "rb") as f:
-    # Read the optional file VERSION.txt containing version number
+        # Read the optional file VERSION.txt containing version number
         version = ""
         version_long = ""
         if os.path.exists("VERSION.txt"):
             with open("VERSION.txt", "r") as version_file:
                 version = version_file.read().strip()
-                version_long = ", current version " + version 
+                version_long = ", current version " + version
 
         image_data = base64.b64encode(f.read()).decode("utf-8")
         st.sidebar.markdown(
@@ -122,12 +126,12 @@ with st.sidebar:
     st.title("Settings")
 
     difficulty = st.radio(
-        "Select difficulty:",
-        ["easy", "normal", "hard", "random"],
+        "Select difficulty for the new question:",
+        ["same as the original", "easy", "normal", "hard", "random"],
     )
 
     language = st.radio(
-        "Select language:",
+        "Select language for the new question:",
         list(LANGUAGES),
     )
 
@@ -137,9 +141,9 @@ st.title("Generate new question-query pair")
 col1, col2 = st.columns(2)
 
 with col1:
-    question = st.text_input("Question", value=VALUES[0]['question'])
+    question = st.text_input("Question", value=VALUES[0]["question"])
 with col2:
-    query = st.text_input("SPARQL query", value=VALUES[0]['query'])
+    query = st.text_input("SPARQL query", value=VALUES[0]["query"])
 
 submit = st.button("Generate")
 
@@ -154,19 +158,41 @@ if submit:
     logger.info("Question: %s", question)
     logger.info("Query: %s", query)
 
-    r = call_dynbench(st.session_state.dynbench, question, query, 'gpt-4o', difficulty, LANGUAGES[language], )
+    r = call_dynbench(
+        st.session_state.dynbench,
+        question,
+        query,
+        "gpt-4o",
+        difficulty,
+        LANGUAGES[language],
+    )
     # r = call_dynbench(st.session_state.dynbench, question, query, 'mistral-small')
 
     if r:
-        st.subheader('New question')
-        st.text(r['transformed_question'])
-        st.subheader('New query')
-        st.text(r['transformed_query'])
+        st.subheader("New question")
+        st.text(r["transformed_question"])
+        st.subheader("New query")
+        st.text(r["transformed_query"])
     else:
-        logger.warning("No question-query generated for question=%r, query=%r", question, query)
-        st.text('No question-query generated')
+        logger.warning(
+            "No question-query generated for question=%r, query=%r", question, query
+        )
+        st.text("No question-query generated")
 
 with open("js/change_menu.js", "r") as f:
     javascript = f.read()
     html(f"<script style='display:none'>{javascript}</script>")
 
+
+html(
+    """
+<script>
+github_ribbon = parent.window.document.createElement("div");            
+github_ribbon.innerHTML = '<a id="github-fork-ribbon" class="github-fork-ribbon right-bottom" href="%s" target="_blank" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>';
+if (parent.window.document.getElementById("github-fork-ribbon") == null) {
+    parent.window.document.body.appendChild(github_ribbon.firstChild);
+}
+</script>
+"""
+    % (GITHUB_REPO,)
+)
