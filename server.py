@@ -1,7 +1,9 @@
 import os
+import logging
 import requests
 from decouple import Config, RepositoryEnv
 
+import colorlog
 import streamlit as st
 from streamlit.components.v1 import html
 
@@ -9,6 +11,21 @@ from PIL import Image
 import base64
 
 from decouple import config
+
+handler = colorlog.StreamHandler()
+handler.setFormatter(colorlog.ColoredFormatter(
+    "%(log_color)s%(asctime)s %(levelname)-8s%(reset)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    log_colors={
+        "DEBUG":    "cyan",
+        "INFO":     "green",
+        "WARNING":  "yellow",
+        "ERROR":    "red",
+        "CRITICAL": "bold_red",
+    },
+))
+logging.basicConfig(level=logging.INFO, handlers=[handler])
+logger = logging.getLogger(__name__)
 
 
 GITHUB_REPO = config('GITHUB_REPO', 'https://github.com/WSE-research/DynBench-Frontend.git')
@@ -133,9 +150,9 @@ st.subheader("Output")
 # output_2 = st.text_area('New query', value='', height=80, disabled=True)
 
 if submit:
-    print(st.session_state.dynbench)
-    print(question)
-    print(query)
+    logger.info("DynBench URL: %s", st.session_state.dynbench)
+    logger.info("Question: %s", question)
+    logger.info("Query: %s", query)
 
     r = call_dynbench(st.session_state.dynbench, question, query, 'gpt-4o', difficulty, LANGUAGES[language], )
     # r = call_dynbench(st.session_state.dynbench, question, query, 'mistral-small')
@@ -146,6 +163,7 @@ if submit:
         st.subheader('New query')
         st.text(r['transformed_query'])
     else:
+        logger.warning("No question-query generated for question=%r, query=%r", question, query)
         st.text('No question-query generated')
 
 with open("js/change_menu.js", "r") as f:
