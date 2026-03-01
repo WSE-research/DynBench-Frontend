@@ -1,7 +1,11 @@
 import os
 import logging
 import requests
-from decouple import Config, RepositoryEnv
+import json
+import random
+
+from decouple import config
+# from decouple import Config, RepositoryEnv
 
 import colorlog
 import streamlit as st
@@ -9,8 +13,6 @@ from streamlit.components.v1 import html
 
 from PIL import Image
 import base64
-
-from decouple import config
 
 handler = colorlog.StreamHandler()
 handler.setFormatter(
@@ -87,10 +89,13 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
         return None
 
 
-config = Config(RepositoryEnv("config.env"))
+# config = Config(RepositoryEnv("config.env"))
 
-if "bearer" not in st.session_state:
+if "dynbench" not in st.session_state:
     st.session_state.dynbench = config("DYNBENCH")
+    with open('benchmarks/DynQALD.json', 'r') as f:
+        st.session_state.samples = json.load(f)
+    st.session_state.random_record = random.choice(st.session_state.samples)
 
 
 st.set_page_config(
@@ -127,7 +132,8 @@ with st.sidebar:
 
     difficulty = st.radio(
         "Select difficulty for the new question:",
-        ["same as the original", "easy", "normal", "hard", "random"],
+        ["easy", "normal", "hard", "random"],
+        help='- Highest PageRank\n- Same as the original\n- Lowest PageRank\n- Any compatible'
     )
 
     language = st.radio(
@@ -135,15 +141,28 @@ with st.sidebar:
         list(LANGUAGES),
     )
 
+
 # --- Main panel ---
-st.title("Generate new question-query pair")
+col_titel, col_random = st.columns([4, 1])
+with col_titel:
+    st.title("Generate new question-query pair")
+with col_random:
+    if st.button('Random sample'):
+        st.session_state.random_record = random.choice(st.session_state.samples)
+        st.rerun()
+        
 
 col1, col2 = st.columns(2)
 
 with col1:
-    question = st.text_input("Question", value=VALUES[0]["question"])
+    # question = st.text_input("Question", value=VALUES[0]["question"], key='question_input')
+    st.session_state.question_input = st.session_state.random_record["question"]
+    st.text_input("Question", key='question_input')
+
 with col2:
-    query = st.text_input("SPARQL query", value=VALUES[0]["query"])
+    # query = st.text_input("SPARQL query", value=VALUES[0]["query"], key='query_input')
+    st.session_state.query_input = st.session_state.random_record["query"]
+    st.text_input("SPARQL query", key='query_input')
 
 submit = st.button("Generate")
 
@@ -155,13 +174,16 @@ st.subheader("Output")
 
 if submit:
     logger.info("DynBench URL: %s", st.session_state.dynbench)
-    logger.info("Question: %s", question)
-    logger.info("Query: %s", query)
+    # logger.info("Question: %s", question)
+    # logger.info("Query: %s", query)
 
+    # call_dynbench(url, question, query, model, complexity="normal", language="en")
     r = call_dynbench(
         st.session_state.dynbench,
-        question,
-        query,
+        # question,
+        # query,
+        st.session_state.question_input,
+        st.session_state.query_input,
         "gpt-4o",
         difficulty,
         LANGUAGES[language],
@@ -173,6 +195,41 @@ if submit:
         st.text(r["transformed_question"])
         st.subheader("New query")
         st.text(r["transformed_query"])
+        
+        # Feedback section
+        st.subheader("Feedback")
+        feedback_rating = st.radio(
+            "How would you rate this transformation?",
+            ["Please select", "👍 Good", "👎 Not good"],
+            key="feedback_rating"
+        )
+        
+        feedback_text = st.text_area(
+            "Additional comments (optional):",
+            key="feedback_text"
+        )
+        
+        if st.button("Submit feedback", key="submit_feedback"):
+            if feedback_rating != "Please select":
+                feedback_data = {
+                    "inputs": [question, query],
+                    "outputs": [r["transformed_question"], r["transformed_query"]],
+                    "rating": 1 if feedback_rating == "👍 Good" else 0
+                }
+                
+                try:
+                    feedback_response = requests.post(
+                        f"{st.session_state.dynbench}/feedback",
+                        json=feedback_data
+                    )
+                    if feedback_response.status_code == 200:
+                        st.success("Thank you for your feedback!")
+                    else:
+                        st.error(f"Failed to submit feedback: {feedback_response.status_code}")
+                except Exception as e:
+                    st.error(f"Error submitting feedback: {str(e)}")
+            else:
+                st.warning("Please select a rating before submitting feedback.")
     else:
         logger.warning(
             "No question-query generated for question=%r, query=%r", question, query
