@@ -178,12 +178,16 @@ if submit:
     # logger.info("Query: %s", query)
 
     # call_dynbench(url, question, query, model, complexity="normal", language="en")
+
+    question = st.session_state.question_input
+    query = st.session_state.query_input
+
     r = call_dynbench(
         st.session_state.dynbench,
-        # question,
-        # query,
-        st.session_state.question_input,
-        st.session_state.query_input,
+        question,
+        query,
+        # st.session_state.question_input,
+        # st.session_state.query_input,
         "gpt-4o",
         difficulty,
         LANGUAGES[language],
