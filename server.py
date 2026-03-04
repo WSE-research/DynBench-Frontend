@@ -238,7 +238,9 @@ if submit:
         logger.warning(
             "No question-query generated for question=%r, query=%r", question, query
         )
-        st.text("No question-query generated")
+        st.subheader('Error')
+        st.text('An error occurred. No question-query were generated')
+        st.text('Please try agin with different settings or new question/query')
 
 with open("js/change_menu.js", "r") as f:
     javascript = f.read()
