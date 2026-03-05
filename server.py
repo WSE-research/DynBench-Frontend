@@ -37,8 +37,9 @@ GITHUB_REPO = config(
     "GITHUB_REPO", "https://github.com/WSE-research/DynBench-Frontend.git"
 )
 
-PAGE_TITLE = "DynBench: robust benchmark records generator"
-PAGE_IMAGE = "images/dynbench.png"
+PAGE_TITLE = 'DynBench: robust benchmark records generator'
+# PAGE_IMAGE = 'images/dynbench.png'
+PAGE_IMAGE = 'images/dynbench-logo-alpha.png'
 
 LANGUAGES = {
     "English": "en",
