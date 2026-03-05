@@ -204,35 +204,47 @@ if submit:
     # r = call_dynbench(st.session_state.dynbench, question, query, 'mistral-small')
 
     if r:
-        new_question = r["transformed_question"]
-        new_query = r["transformed_query"]
-        st.divider()
+        st.session_state['new_question'] = r['transformed_question']
+        st.session_state['new_query'] = r['transformed_query']
+    else:
+        st.session_state.pop('new_question', None)
+        st.session_state.pop('new_query', None)
+        logger.warning(
+            "No question-query generated for question=%r, query=%r", question, query
+        )
+        st.subheader(':red[Error]')
+        st.text('Sorry, an error occurred. No question-query pair was generated.')
+        st.text('Please try again with different settings or new question/query.')
 
-        col1, col2, col3, _ =  st.columns([10, 1, 1, 2])
-        with col1:
-            st.subheader("New question")
-            st.text(r["transformed_question"])
-        with col2:
-            if st.button(':green[OK]', key='new_question_OK', use_container_width=True):
-                submit_feedback(question, query, new_question, new_query, 'question', 'OK')
-        with col3:
-            if st.button(':red[Wrong!]', key='new_question_wrong', use_container_width=True):
-                submit_feedback(question, query, new_question, new_query, 'question', 'wrong')
+if 'new_question' in st.session_state:
+    question = st.session_state['question_input']
+    query = st.session_state['query_input']
+    new_question = st.session_state['new_question']
+    new_query = st.session_state['new_query']
 
-        st.divider()
+    col1, col2, col3, _ =  st.columns([10, 1, 1, 2])
+    with col1:
+        st.subheader("New question")
+        st.text(new_question)
+    with col2:
+        if st.button(':green[OK]', key='new_question_OK', use_container_width=True):
+            submit_feedback(question, query, new_question, new_query, 'question', 'OK')
+    with col3:
+        if st.button(':red[Wrong!]', key='new_question_wrong', use_container_width=True):
+            submit_feedback(question, query, new_question, new_query, 'question', 'wrong')
 
-        col1, col2, col3, _ =  st.columns([10, 1, 1, 2])
-        with col1:
-            st.subheader("New query")
-            st.text(r["transformed_query"])
-        with col2:
-            if st.button(':green[OK]', key='new_query_OK', use_container_width=True):
-                pass
-        with col3:
-            if st.button(':red[Wrong!]', key='new_query_wrong', use_container_width=True):
-                pass
+    col1, col2, col3, _ =  st.columns([10, 1, 1, 2])
+    with col1:
+        st.subheader("New query")
+        st.text(new_query)
+    with col2:
+        if st.button(':green[OK]', key='new_query_OK', use_container_width=True):
+            submit_feedback(question, query, new_question, new_query, 'query', 'OK')
+    with col3:
+        if st.button(':red[Wrong!]', key='new_query_wrong', use_container_width=True):
+            submit_feedback(question, query, new_question, new_query, 'query', 'wrong')
 
-        st.divider()
+    # st.divider()
         
         # Feedback section
         # st.subheader("Feedback")
@@ -268,13 +280,6 @@ if submit:
         #             st.error(f"Error submitting feedback: {str(e)}")
         #     else:
         #         st.warning("Please select a rating before submitting feedback.")
-    else:
-        logger.warning(
-            "No question-query generated for question=%r, query=%r", question, query
-        )
-        st.subheader('Error')
-        st.text('An error occurred. No question-query were generated')
-        st.text('Please try agin with different settings or new question/query')
 
 with open("js/change_menu.js", "r") as f:
     javascript = f.read()
