@@ -3,8 +3,8 @@ import logging
 import requests
 import json
 import random
-from urllib.parse import urlparse, urlunparse
 
+import healthcheck
 from decouple import config
 # from decouple import Config, RepositoryEnv
 
@@ -42,7 +42,7 @@ PAGE_TITLE = "DynBench: robust benchmark records generator"
 # PAGE_IMAGE = 'images/dynbench.png'
 PAGE_IMAGE = "images/dynbench-logo-alpha.png"
 
-LANGUAGES = {
+LANGUAGES = {  # display name → ISO code
     "English": "en",
     "German": "de",
     "French": "fr",
@@ -64,6 +64,7 @@ LANGUAGES = {
     "Serbian": "sr",
     "Bulgarian": "bg",
 }
+LANGUAGE_CODES = {code: name for name, code in LANGUAGES.items()}  # ISO code → display name
 
 VALUES = [
     {
@@ -73,24 +74,9 @@ VALUES = [
 ]
 
 
-def check_health(dynbench_url):
-    parsed = urlparse(dynbench_url)
-    health_url = urlunparse(parsed._replace(path="/health", query="", fragment=""))
-    logger.info("Checking DynBench health at %s", health_url)
-    try:
-        r = requests.get(health_url, timeout=5)
-        if r.status_code == 200:
-            logger.info("DynBench health check passed: %s", r.text)
-            return True, health_url, r.text
-        else:
-            logger.warning("DynBench health check returned status %d: %s", r.status_code, r.text)
-            return False, health_url, f"HTTP {r.status_code}: {r.text}"
-    except requests.exceptions.RequestException as e:
-        logger.error("DynBench health check failed: %s", e)
-        return False, health_url, str(e)
-
 
 def call_dynbench(url, question, query, model, complexity="normal", language="en"):
+    """Return (result_dict, error_str). On success error_str is None; on failure result_dict is None."""
     headers = {}
     data = {
         "question": question,
@@ -102,13 +88,27 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
     }
 
     try:
-        r = requests.post(url, headers=headers, json=data)
-        if r and r.status_code == 200:
-            return r.json()
-        else:
-            return None
-    except:
-        return None
+        r = requests.post(url, headers=headers, json=data, timeout=30)
+    except requests.exceptions.ConnectionError as e:
+        return None, f"Connection error: {e}"
+    except requests.exceptions.Timeout:
+        return None, "Request timed out after 30 s"
+    except requests.exceptions.RequestException as e:
+        return None, f"Request failed: {e}"
+
+    if r.status_code != 200:
+        return None, f"HTTP {r.status_code}: {r.text.strip()}"
+
+    try:
+        body = r.json()
+    except Exception as e:
+        return None, f"Could not parse response as JSON: {e} — raw: {r.text[:200]}"
+
+    missing = [k for k in ("transformed_question", "transformed_query") if not body.get(k)]
+    if missing:
+        return None, f"Response missing field(s): {', '.join(missing)} — body: {body}"
+
+    return body, None
 
 
 # config = Config(RepositoryEnv("config.env"))
@@ -116,11 +116,7 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
 if "dynbench" not in st.session_state:
     st.session_state["dynbench"] = config("DYNBENCH")
     logger.info("DynBench URL: %s", st.session_state.dynbench)
-
-    healthy, health_url, health_msg = check_health(st.session_state.dynbench)
-    st.session_state["health_ok"] = healthy
-    st.session_state["health_url"] = health_url
-    st.session_state["health_msg"] = health_msg
+    healthcheck.start_background_check(st.session_state.dynbench)
 
     with open("benchmarks/DynQALD.json", "r") as f:
         st.session_state.samples = json.load(f)
@@ -172,14 +168,11 @@ with st.sidebar:
 
     st.divider()
 
-    if st.session_state.get("health_ok"):
+    _backend_status = healthcheck.get_status()
+    if _backend_status["ok"]:
         st.caption("✅ Backend reachable")
     else:
-        st.error(
-            f"Backend unreachable at {st.session_state.get('health_url', '?')}: "
-            f"{st.session_state.get('health_msg', '')}",
-            icon="🚨",
-        )
+        st.error(f"Backend unreachable: {_backend_status['message']}", icon="🚨")
 
 
 # --- Main panel ---
@@ -204,7 +197,7 @@ with col2:
     st.session_state.query_input = st.session_state.random_record["query"]
     st.text_input("SPARQL query", key="query_input")
 
-submit = st.button("Generate")
+submit = st.button(f"Generate using {MODEL}")
 
 # --- Output fields ---
 # st.subheader("Output")
@@ -227,36 +220,55 @@ if submit:
 
     # call_dynbench(url, question, query, model, complexity="normal", language="en")
 
-    r = call_dynbench(
+    r, error = call_dynbench(
         st.session_state.dynbench,
         question,
         query,
-        # st.session_state.question_input,
-        # st.session_state.query_input,
         MODEL,
         difficulty,
         LANGUAGES[language],
     )
-    # r = call_dynbench(st.session_state.dynbench, question, query, 'mistral-small')
 
-    if r and r.get("transformed_question", None) and r.get("transformed_query", None):
+    if r:
         st.session_state["new_question"] = r["transformed_question"]
         st.session_state["new_query"] = r["transformed_query"]
+        detected_code = (
+            r.get("detected_language")
+            or r.get("original_language")
+            or r.get("source_language")
+            or r.get("lang")
+            or LANGUAGES[language]
+        )
+        detected_name = LANGUAGE_CODES.get(detected_code, detected_code)
+        st.session_state["detected_language"] = f"{detected_name} ({detected_code})"
     else:
         st.session_state.pop("new_question", None)
         st.session_state.pop("new_query", None)
         logger.warning(
-            "No question-query generated for question=%r, query=%r", question, query
+            "No question-query generated for question=%r, query=%r — reason: %s",
+            question, query, error,
         )
         st.subheader(":red[Error]")
-        st.text("Sorry, an error occurred. No question-query pair was generated.")
-        st.text("Please try again with different settings or new question/query.")
+        st.text("Sorry, no question-query pair was generated.")
+        st.error(error)
 
 if "new_question" in st.session_state:
     question = st.session_state["question_input"]
     query = st.session_state["query_input"]
     new_question = st.session_state["new_question"]
     new_query = st.session_state["new_query"]
+    detected_language = st.session_state.get("detected_language", "")
+
+    col1, col2, col3, _ = st.columns([10, 1, 1, 2])
+    with col1:
+        st.subheader("Recognized language of original question")
+        st.text(detected_language)
+    with col2:
+        if st.button(":green[OK]", key="detected_language_OK", use_container_width=True):
+            submit_feedback(question, query, new_question, new_query, "detected_language", "OK")
+    with col3:
+        if st.button(":red[Wrong!]", key="detected_language_wrong", use_container_width=True):
+            submit_feedback(question, query, new_question, new_query, "detected_language", "wrong")
 
     col1, col2, col3, _ = st.columns([10, 1, 1, 2])
     with col1:

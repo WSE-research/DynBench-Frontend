@@ -11,4 +11,9 @@ RUN python -m pip install -r requirements.txt
 COPY . /app
 WORKDIR /app
 
-CMD ["streamlit", "run", "server.py", "--server.address", "0.0.0.0"]
+RUN python -m pytest -v
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -sf http://localhost:8501/health || exit 1
+
+CMD ["python", "run.py"]
