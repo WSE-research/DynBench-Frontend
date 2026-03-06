@@ -3,6 +3,7 @@ import logging
 import requests
 import json
 import random
+from urllib.parse import urlparse, urlunparse
 
 from decouple import config
 # from decouple import Config, RepositoryEnv
@@ -32,14 +33,14 @@ logging.basicConfig(level=logging.INFO, handlers=[handler])
 logger = logging.getLogger(__name__)
 
 
-MODEL = config('MODEL')
+MODEL = config("MODEL")
 GITHUB_REPO = config(
     "GITHUB_REPO", "https://github.com/WSE-research/DynBench-Frontend.git"
 )
 
-PAGE_TITLE = 'DynBench: robust benchmark records generator'
+PAGE_TITLE = "DynBench: robust benchmark records generator"
 # PAGE_IMAGE = 'images/dynbench.png'
-PAGE_IMAGE = 'images/dynbench-logo-alpha.png'
+PAGE_IMAGE = "images/dynbench-logo-alpha.png"
 
 LANGUAGES = {
     "English": "en",
@@ -72,6 +73,23 @@ VALUES = [
 ]
 
 
+def check_health(dynbench_url):
+    parsed = urlparse(dynbench_url)
+    health_url = urlunparse(parsed._replace(path="/health", query="", fragment=""))
+    logger.info("Checking DynBench health at %s", health_url)
+    try:
+        r = requests.get(health_url, timeout=5)
+        if r.status_code == 200:
+            logger.info("DynBench health check passed: %s", r.text)
+            return True, health_url, r.text
+        else:
+            logger.warning("DynBench health check returned status %d: %s", r.status_code, r.text)
+            return False, health_url, f"HTTP {r.status_code}: {r.text}"
+    except requests.exceptions.RequestException as e:
+        logger.error("DynBench health check failed: %s", e)
+        return False, health_url, str(e)
+
+
 def call_dynbench(url, question, query, model, complexity="normal", language="en"):
     headers = {}
     data = {
@@ -91,15 +109,20 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
             return None
     except:
         return None
-    
+
 
 # config = Config(RepositoryEnv("config.env"))
 
-if 'dynbench' not in st.session_state:
-    st.session_state['dynbench'] = config("DYNBENCH")
-    logger.info(f'Dynbench URL: {st.session_state.dynbench}')
+if "dynbench" not in st.session_state:
+    st.session_state["dynbench"] = config("DYNBENCH")
+    logger.info("DynBench URL: %s", st.session_state.dynbench)
 
-    with open('benchmarks/DynQALD.json', 'r') as f:
+    healthy, health_url, health_msg = check_health(st.session_state.dynbench)
+    st.session_state["health_ok"] = healthy
+    st.session_state["health_url"] = health_url
+    st.session_state["health_msg"] = health_msg
+
+    with open("benchmarks/DynQALD.json", "r") as f:
         st.session_state.samples = json.load(f)
     st.session_state.random_record = random.choice(st.session_state.samples)
 
@@ -139,7 +162,7 @@ with st.sidebar:
     difficulty = st.radio(
         "Select difficulty for the new question:",
         ["easy", "normal", "hard", "random"],
-        help='- Highest PageRank\n- Same as the original\n- Lowest PageRank\n- Any compatible'
+        help="- Highest PageRank\n- Same as the original\n- Lowest PageRank\n- Any compatible",
     )
 
     language = st.radio(
@@ -147,28 +170,39 @@ with st.sidebar:
         list(LANGUAGES),
     )
 
+    st.divider()
+
+    if st.session_state.get("health_ok"):
+        st.caption("✅ Backend reachable")
+    else:
+        st.error(
+            f"Backend unreachable at {st.session_state.get('health_url', '?')}: "
+            f"{st.session_state.get('health_msg', '')}",
+            icon="🚨",
+        )
+
 
 # --- Main panel ---
 col_titel, col_random = st.columns([4, 1])
 with col_titel:
     st.title("Generate new question-query pair")
 with col_random:
-    if st.button('Random sample'):
+    if st.button("Random sample"):
         st.session_state.random_record = random.choice(st.session_state.samples)
         st.rerun()
-        
+
 
 col1, col2 = st.columns(2)
 
 with col1:
     # question = st.text_input("Question", value=VALUES[0]["question"], key='question_input')
     st.session_state.question_input = st.session_state.random_record["question"]
-    st.text_input("Question", key='question_input')
+    st.text_input("Question", key="question_input")
 
 with col2:
     # query = st.text_input("SPARQL query", value=VALUES[0]["query"], key='query_input')
     st.session_state.query_input = st.session_state.random_record["query"]
-    st.text_input("SPARQL query", key='query_input')
+    st.text_input("SPARQL query", key="query_input")
 
 submit = st.button("Generate")
 
@@ -178,6 +212,7 @@ submit = st.button("Generate")
 # output_1 = st.text_area('New question', value='', height=80, disabled=True)
 # output_2 = st.text_area('New query', value='', height=80, disabled=True)
 
+
 def submit_feedback(question, query, new_question, new_query, object, feedback):
     pass
 
@@ -186,7 +221,7 @@ if submit:
     question = st.session_state.question_input
     query = st.session_state.query_input
 
-    logger.info('Run new generation for question {question}')
+    logger.info(f'Run new generation for question "{question}" and query "{query}"')
     # logger.info("Question: %s", question)
     # logger.info("Query: %s", query)
 
@@ -204,83 +239,87 @@ if submit:
     )
     # r = call_dynbench(st.session_state.dynbench, question, query, 'mistral-small')
 
-    if r and r.get('transformed_question', None) and r.get('transformed_query', None):
-        st.session_state['new_question'] = r['transformed_question']
-        st.session_state['new_query'] = r['transformed_query']
+    if r and r.get("transformed_question", None) and r.get("transformed_query", None):
+        st.session_state["new_question"] = r["transformed_question"]
+        st.session_state["new_query"] = r["transformed_query"]
     else:
-        st.session_state.pop('new_question', None)
-        st.session_state.pop('new_query', None)
+        st.session_state.pop("new_question", None)
+        st.session_state.pop("new_query", None)
         logger.warning(
             "No question-query generated for question=%r, query=%r", question, query
         )
-        st.subheader(':red[Error]')
-        st.text('Sorry, an error occurred. No question-query pair was generated.')
-        st.text('Please try again with different settings or new question/query.')
+        st.subheader(":red[Error]")
+        st.text("Sorry, an error occurred. No question-query pair was generated.")
+        st.text("Please try again with different settings or new question/query.")
 
-if 'new_question' in st.session_state:
-    question = st.session_state['question_input']
-    query = st.session_state['query_input']
-    new_question = st.session_state['new_question']
-    new_query = st.session_state['new_query']
+if "new_question" in st.session_state:
+    question = st.session_state["question_input"]
+    query = st.session_state["query_input"]
+    new_question = st.session_state["new_question"]
+    new_query = st.session_state["new_query"]
 
-    col1, col2, col3, _ =  st.columns([10, 1, 1, 2])
+    col1, col2, col3, _ = st.columns([10, 1, 1, 2])
     with col1:
         st.subheader("New question")
         st.text(new_question)
     with col2:
-        if st.button(':green[OK]', key='new_question_OK', use_container_width=True):
-            submit_feedback(question, query, new_question, new_query, 'question', 'OK')
+        if st.button(":green[OK]", key="new_question_OK", use_container_width=True):
+            submit_feedback(question, query, new_question, new_query, "question", "OK")
     with col3:
-        if st.button(':red[Wrong!]', key='new_question_wrong', use_container_width=True):
-            submit_feedback(question, query, new_question, new_query, 'question', 'wrong')
+        if st.button(
+            ":red[Wrong!]", key="new_question_wrong", use_container_width=True
+        ):
+            submit_feedback(
+                question, query, new_question, new_query, "question", "wrong"
+            )
 
-    col1, col2, col3, _ =  st.columns([10, 1, 1, 2])
+    col1, col2, col3, _ = st.columns([10, 1, 1, 2])
     with col1:
         st.subheader("New query")
         st.text(new_query)
     with col2:
-        if st.button(':green[OK]', key='new_query_OK', use_container_width=True):
-            submit_feedback(question, query, new_question, new_query, 'query', 'OK')
+        if st.button(":green[OK]", key="new_query_OK", use_container_width=True):
+            submit_feedback(question, query, new_question, new_query, "query", "OK")
     with col3:
-        if st.button(':red[Wrong!]', key='new_query_wrong', use_container_width=True):
-            submit_feedback(question, query, new_question, new_query, 'query', 'wrong')
+        if st.button(":red[Wrong!]", key="new_query_wrong", use_container_width=True):
+            submit_feedback(question, query, new_question, new_query, "query", "wrong")
 
     # st.divider()
-        
-        # Feedback section
-        # st.subheader("Feedback")
-        # feedback_rating = st.radio(
-        #     "How would you rate this transformation?",
-        #     ["Please select", "👍 Good", "👎 Not good"],
-        #     key="feedback_rating"
-        # )
-        
-        # feedback_text = st.text_area(
-        #     "Additional comments (optional):",
-        #     key="feedback_text"
-        # )
-        
-        # if st.button("Submit feedback", key="submit_feedback"):
-        #     if feedback_rating != "Please select":
-        #         feedback_data = {
-        #             "inputs": [question, query],
-        #             "outputs": [r["transformed_question"], r["transformed_query"]],
-        #             "rating": 1 if feedback_rating == "👍 Good" else 0
-        #         }
-                
-        #         try:
-        #             feedback_response = requests.post(
-        #                 f"{st.session_state.dynbench}/feedback",
-        #                 json=feedback_data
-        #             )
-        #             if feedback_response.status_code == 200:
-        #                 st.success("Thank you for your feedback!")
-        #             else:
-        #                 st.error(f"Failed to submit feedback: {feedback_response.status_code}")
-        #         except Exception as e:
-        #             st.error(f"Error submitting feedback: {str(e)}")
-        #     else:
-        #         st.warning("Please select a rating before submitting feedback.")
+
+    # Feedback section
+    # st.subheader("Feedback")
+    # feedback_rating = st.radio(
+    #     "How would you rate this transformation?",
+    #     ["Please select", "👍 Good", "👎 Not good"],
+    #     key="feedback_rating"
+    # )
+
+    # feedback_text = st.text_area(
+    #     "Additional comments (optional):",
+    #     key="feedback_text"
+    # )
+
+    # if st.button("Submit feedback", key="submit_feedback"):
+    #     if feedback_rating != "Please select":
+    #         feedback_data = {
+    #             "inputs": [question, query],
+    #             "outputs": [r["transformed_question"], r["transformed_query"]],
+    #             "rating": 1 if feedback_rating == "👍 Good" else 0
+    #         }
+
+    #         try:
+    #             feedback_response = requests.post(
+    #                 f"{st.session_state.dynbench}/feedback",
+    #                 json=feedback_data
+    #             )
+    #             if feedback_response.status_code == 200:
+    #                 st.success("Thank you for your feedback!")
+    #             else:
+    #                 st.error(f"Failed to submit feedback: {feedback_response.status_code}")
+    #         except Exception as e:
+    #             st.error(f"Error submitting feedback: {str(e)}")
+    #     else:
+    #         st.warning("Please select a rating before submitting feedback.")
 
 with open("js/change_menu.js", "r") as f:
     javascript = f.read()
