@@ -1,3 +1,160 @@
+= DynBench Frontend
+
+DynBench is a web application for generating robust benchmark records by transforming question-query pairs using AI models.
+
+== Features
+
+* Transform natural language questions with SPARQL queries
+* Support for multiple languages (20 languages)
+* Adjustable difficulty levels (easy, normal, hard or random)
+* Random sample selection from benchmark datasets
+* Feedback collection for transformations
+
+== Prerequisites
+
+* Python 3.10+
+* Docker (optional, for containerized deployment)
+
+== Installation
+
+### Clone the repository
+
+```bash
+git clone <repository-url>
+cd DynBench-Frontend
+```
+
+### Install dependencies
+
+Using pip:
+
+```bash
+pip install -r requirements.txt
+```
+
+Or using pipenv:
+
+```bash
+pipenv install
+```
+
+== Configuration
+
+The application requires environment variables to be set. Create a `.env` file in the project root:
+
+```env
+DYNBENCH=<Path to LLM transform endpoint>
+MODEL=<Your model>
+```
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DYNBENCH` | URL of the DynBench backend service | - |
+| `MODEL` | AI model to use for transformations | - |
+| `GITHUB_REPO` | GitHub repository URL for the fork ribbon | https://github.com/WSE-research/DynBench-Frontend.git |
+
+== Running the Application
+
+### Running with Python (Development)
+
+1. Ensure you have installed the dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Set up your `.env` file (see <<configuration>>)
+
+3. Run the Streamlit application:
+   ```bash
+   streamlit run server.py
+   ```
+
+4. The application will open in your browser at `http://localhost:8501`
+
+### Running with Docker
+
+1. Build the Docker image:
+   ```bash
+   docker build -t dynbench-frontend .
+   ```
+
+2. Run the container with environment variables:
+   ```bash
+   docker run -p 8501:8501 \
+     -e DYNBENCH=http://your-backend-url:port/transform \
+     -e MODEL=mistral-small \
+     dynbench-frontend
+   ```
+
+3. The application will be available at `http://localhost:8501`
+
+### Running with Docker Compose (optional)
+
+Create a `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+services:
+  dynbench-frontend:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - DYNBENCH=http://your-backend-url:port/transform
+      - MODEL=mistral-small
+    restart: unless-stopped
+```
+
+Then run:
+```bash
+docker-compose up -d
+```
+
+== Usage
+
+1. **Select difficulty**: Choose from easy, normal, hard, or random
+2. **Select language**: Pick from 20 supported languages
+3. **Enter question and query**: Provide a natural language question and its corresponding SPARQL query
+4. **Generate**: Click the "Generate" button to transform the pair
+5. **Review results**: Check the transformed question and query
+6. **Provide feedback**: Use the OK/Wrong buttons to give feedback on each result
+
+== Benchmark Datasets
+
+The application includes sample datasets:
+- `benchmarks/DynQALD.json` - Question Answering Benchmark
+- `benchmarks/DynRuBQ.json` - Russian/English Benchmark
+
+== Project Structure
+
+```
+DynBench-Frontend/
+├── server.py           # Main Streamlit application
+├── requirements.txt    # Python dependencies
+├── Dockerfile          # Docker configuration
+├── .env               # Environment variables
+├── css/               # Stylesheets
+├── images/            # Application images
+├── js/                # JavaScript files
+└── benchmarks/        # Benchmark data
+```
+
+== Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Open a Pull Request
+
+== License
+
+This project is licensed under the MIT License.
+
+== Appendix
+
 List of languages by number of speakers in Europe 
 (top 20 from https://en.wikipedia.org/wiki/List_of_languages_by_number_of_speakers_in_Europe)
 
