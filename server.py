@@ -204,7 +204,7 @@ if submit:
     )
     # r = call_dynbench(st.session_state.dynbench, question, query, 'mistral-small')
 
-    if r:
+    if r and r.get('transformed_question', None) and r.get('transformed_query', None):
         st.session_state['new_question'] = r['transformed_question']
         st.session_state['new_query'] = r['transformed_query']
     else:
