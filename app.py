@@ -5,7 +5,6 @@ import json
 import random
 
 from decouple import config
-# from decouple import Config, RepositoryEnv
 
 import colorlog
 import streamlit as st
@@ -38,7 +37,7 @@ GITHUB_REPO = config(
 )
 
 PAGE_TITLE = 'DynBench: robust benchmark records generator'
-# PAGE_IMAGE = 'images/dynbench.png'
+PAGE_ICON  = 'images/dynbench-icon-64.png'
 PAGE_IMAGE = 'images/dynbench-logo-alpha.png'
 
 LANGUAGES = {
@@ -96,30 +95,31 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
         return None
     
 
-# config = Config(RepositoryEnv("config.env"))
-
 if 'dynbench' not in st.session_state:
     st.session_state['dynbench'] = config("DYNBENCH")
-    logger.info(f'Dynbench URL: {st.session_state.dynbench}')
 
     with open('benchmarks/DynQALD.json', 'r') as f:
         st.session_state.samples = json.load(f)
 
-    st.session_state.languages = {i['language'] for i in st.session_state.samples}
+    st.session_state.languages = sorted(list({i['language'] for i in st.session_state.samples}))
+    for lang in st.session_state.languages:
+        st.session_state[f'checkbox_{lang}'] = True
 
     st.session_state.random_record = random.choice(st.session_state.samples)
+    st.session_state.question_input = st.session_state.random_record["question"]
+    st.session_state.query_input = st.session_state.random_record["query"]
 
 
 st.set_page_config(
     layout="wide",
     page_title=PAGE_TITLE,
-    # page_icon=Image.open(PAGE_ICON)
+    page_icon=Image.open(PAGE_ICON)
 )
 
 with open("css/style_menu_logo.css") as f, open("css/style_github_ribbon.css") as g:
     st.markdown(f"<style>{f.read()}{g.read()}</style>", unsafe_allow_html=True)
 
-# --- Sidebar ---
+# === Sidebar ===
 with st.sidebar:
     with open(PAGE_IMAGE, "rb") as f:
         # Read the optional file VERSION.txt containing version number
@@ -145,44 +145,55 @@ with st.sidebar:
     difficulty = st.radio(
         "Select difficulty for the new question:",
         ["easy", "normal", "hard", "random"],
-        help='- Highest PageRank\n- Same as the original\n- Lowest PageRank\n- Any compatible'
+        help='**Options are:**\n- Easy: possible highest PageRank\n- Normal: same as the original\n- Hard: possible lowest PageRank\n- Random: any compatible',
     )
 
-    language = st.radio(
+    # --- Original language(S) selector ---
+    st.markdown(
+        '<style>div[data-testid="stCheckbox"]{margin-bottom: -10px;}</style>', 
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        '<span style="font-size:14px; font-weight:400; margin-bottom: 4px;">Select language(s) for random record</span>',
+        unsafe_allow_html=True,
+        help="Select language(s) you'd like to see for a random sample.",
+    )
+    for lang in st.session_state.languages:
+        st.checkbox(LANG_BACK[lang], key=f'checkbox_{lang}')
+    st.space("small")
+
+    # language = st.radio(
+    language = st.selectbox(
         "Select language for the new question:",
         list(LANGUAGES),
     )
 
 
 # --- Main panel ---
-col_titel, col_random = st.columns([4, 1])
+col_titel, col_random = st.columns([4, 1], vertical_alignment='bottom')
 with col_titel:
     st.title("Generate new question-query pair")
 with col_random:
     if st.button('Random sample'):
-        st.session_state.random_record = random.choice(st.session_state.samples)
-        st.rerun()
-        
+        selected = {lang for lang in st.session_state.languages if st.session_state[f'checkbox_{lang}']}
+        # st.write(selected)
+        slice = [i for i in st.session_state.samples if i['language'] in selected]
 
-col1, col2 = st.columns(2)
+        st.session_state.random_record = random.choice(slice)
+        st.session_state.question_input = st.session_state.random_record["question"]
+        st.session_state.query_input = st.session_state.random_record["query"]
+        st.rerun()        
+
+col1, col2 = st.columns([2, 3])
 
 with col1:
-    # question = st.text_input("Question", value=VALUES[0]["question"], key='question_input')
-    st.session_state.question_input = st.session_state.random_record["question"]
     st.text_input("Question", key='question_input')
 
 with col2:
-    # query = st.text_input("SPARQL query", value=VALUES[0]["query"], key='query_input')
-    st.session_state.query_input = st.session_state.random_record["query"]
     st.text_input("SPARQL query", key='query_input')
 
 submit = st.button("Generate")
 
-# --- Output fields ---
-# st.subheader("Output")
-
-# output_1 = st.text_area('New question', value='', height=80, disabled=True)
-# output_2 = st.text_area('New query', value='', height=80, disabled=True)
 
 def submit_feedback(question, query, new_question, new_query, object, feedback):
     pass
@@ -192,23 +203,17 @@ if submit:
     question = st.session_state.question_input
     query = st.session_state.query_input
 
-    logger.info('Run new generation for question {question}')
-    # logger.info("Question: %s", question)
-    # logger.info("Query: %s", query)
-
-    # call_dynbench(url, question, query, model, complexity="normal", language="en")
+    logger.info(f'Run new generation for question {question}')
+    logger.info(f'Query: {query}')
 
     r = call_dynbench(
         st.session_state.dynbench,
         question,
         query,
-        # st.session_state.question_input,
-        # st.session_state.query_input,
         MODEL,
         difficulty,
         LANGUAGES[language],
     )
-    # r = call_dynbench(st.session_state.dynbench, question, query, 'mistral-small')
 
     if r and r.get('transformed_question', None) and r.get('transformed_query', None):
         st.session_state['new_question'] = r['transformed_question']
@@ -251,42 +256,6 @@ if 'new_question' in st.session_state:
         if st.button(':red[✗]', key='new_query_wrong', use_container_width=True):
             submit_feedback(question, query, new_question, new_query, 'query', 'wrong')
 
-    # st.divider()
-        
-        # Feedback section
-        # st.subheader("Feedback")
-        # feedback_rating = st.radio(
-        #     "How would you rate this transformation?",
-        #     ["Please select", "👍 Good", "👎 Not good"],
-        #     key="feedback_rating"
-        # )
-        
-        # feedback_text = st.text_area(
-        #     "Additional comments (optional):",
-        #     key="feedback_text"
-        # )
-        
-        # if st.button("Submit feedback", key="submit_feedback"):
-        #     if feedback_rating != "Please select":
-        #         feedback_data = {
-        #             "inputs": [question, query],
-        #             "outputs": [r["transformed_question"], r["transformed_query"]],
-        #             "rating": 1 if feedback_rating == "👍 Good" else 0
-        #         }
-                
-        #         try:
-        #             feedback_response = requests.post(
-        #                 f"{st.session_state.dynbench}/feedback",
-        #                 json=feedback_data
-        #             )
-        #             if feedback_response.status_code == 200:
-        #                 st.success("Thank you for your feedback!")
-        #             else:
-        #                 st.error(f"Failed to submit feedback: {feedback_response.status_code}")
-        #         except Exception as e:
-        #             st.error(f"Error submitting feedback: {str(e)}")
-        #     else:
-        #         st.warning("Please select a rating before submitting feedback.")
 
 with open("js/change_menu.js", "r") as f:
     javascript = f.read()
@@ -294,7 +263,7 @@ with open("js/change_menu.js", "r") as f:
 
 
 html(
-    """
+"""
 <script>
 github_ribbon = parent.window.document.createElement("div");            
 github_ribbon.innerHTML = '<a id="github-fork-ribbon" class="github-fork-ribbon right-bottom" href="%s" target="_blank" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>';
@@ -303,5 +272,5 @@ if (parent.window.document.getElementById("github-fork-ribbon") == null) {
 }
 </script>
 """
-    % (GITHUB_REPO,)
+% (GITHUB_REPO,)
 )
