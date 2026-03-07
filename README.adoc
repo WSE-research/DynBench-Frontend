@@ -68,7 +68,7 @@ MODEL=<Your model>
 
 3. Run the Streamlit application:
    ```bash
-   streamlit run server.py
+   streamlit run app.py
    ```
 
 4. The application will open in your browser at `http://localhost:8501`
@@ -131,7 +131,7 @@ The application includes sample datasets:
 
 ```
 DynBench-Frontend/
-├── server.py           # Main Streamlit application
+├── app.py           # Main Streamlit application
 ├── requirements.txt    # Python dependencies
 ├── Dockerfile          # Docker configuration
 ├── .env               # Environment variables
