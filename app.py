@@ -228,10 +228,10 @@ if 'new_question' in st.session_state:
         st.subheader("New question")
         st.text(new_question)
     with col2:
-        if st.button(':green[OK]', key='new_question_OK', use_container_width=True):
+        if st.button(':green[✔]', key='new_question_OK', use_container_width=True):
             submit_feedback(question, query, new_question, new_query, 'question', 'OK')
     with col3:
-        if st.button(':red[Wrong!]', key='new_question_wrong', use_container_width=True):
+        if st.button(':red[✗]', key='new_question_wrong', use_container_width=True):
             submit_feedback(question, query, new_question, new_query, 'question', 'wrong')
 
     col1, col2, col3, _ =  st.columns([10, 1, 1, 2])
@@ -239,10 +239,10 @@ if 'new_question' in st.session_state:
         st.subheader("New query")
         st.text(new_query)
     with col2:
-        if st.button(':green[OK]', key='new_query_OK', use_container_width=True):
+        if st.button(':green[✔]', key='new_query_OK', use_container_width=True):
             submit_feedback(question, query, new_question, new_query, 'query', 'OK')
     with col3:
-        if st.button(':red[Wrong!]', key='new_query_wrong', use_container_width=True):
+        if st.button(':red[✗]', key='new_query_wrong', use_container_width=True):
             submit_feedback(question, query, new_question, new_query, 'query', 'wrong')
 
     # st.divider()
