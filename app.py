@@ -64,6 +64,9 @@ LANGUAGES = {
     "Bulgarian": "bg",
 }
 
+LANG_BACK = {i: j for i, j in zip(LANGUAGES.values(), LANGUAGES.keys())}
+
+
 VALUES = [
     {
         "question": "What is the highest mountain in Germany?",
@@ -101,6 +104,9 @@ if 'dynbench' not in st.session_state:
 
     with open('benchmarks/DynQALD.json', 'r') as f:
         st.session_state.samples = json.load(f)
+
+    st.session_state.languages = {i['language'] for i in st.session_state.samples}
+
     st.session_state.random_record = random.choice(st.session_state.samples)
 
 
