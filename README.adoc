@@ -49,11 +49,26 @@ MODEL=<Your model>
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DYNBENCH` | URL of the DynBench backend service | - |
-| `MODEL` | AI model to use for transformations | - |
-| `GITHUB_REPO` | GitHub repository URL for the fork ribbon | https://github.com/WSE-research/DynBench-Frontend.git |
+[cols="1,2,2"]
+|===
+
+| Variable
+| Description
+| Default
+
+| `DYNBENCH`
+| URL of the DynBench backend service
+| -
+
+| `MODEL`
+| AI model to use for transformations
+| -
+
+| `GITHUB_REPO`
+| GitHub repository URL for the fork ribbon
+| https://github.com/WSE-research/DynBench-Frontend.git
+
+|===
 
 == Running the Application
 
