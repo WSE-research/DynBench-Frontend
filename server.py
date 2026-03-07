@@ -340,23 +340,25 @@ with col_random:
 col1, col2 = st.columns(2)
 
 _record = st.session_state.get("random_record")
-# Format the SPARQL query using sparqlib and display it in a text area
-st.session_state.query_input = (
-    sparqlib.format_string(_record["query"]) if _record else ""
-)
-st.session_state.question_input = _record["question"] if _record else ""
 
-lines = (
-    len(st.session_state.query_input.split("\n")) + 2
-)  # one row per line plus a spare row
+# Only overwrite the textarea contents when the loaded record changes.
+# Using (id, language) as the key means user edits are preserved across
+# all other reruns (widget interactions, sidebar changes, etc.).
+_current_record_key = (
+    (_record["id"], _record.get("language")) if _record else None
+)
+if st.session_state.get("_loaded_record_key") != _current_record_key:
+    st.session_state["_loaded_record_key"] = _current_record_key
+    st.session_state.question_input = _record["question"] if _record else ""
+    st.session_state.query_input = (
+        sparqlib.format_string(_record["query"]) if _record else ""
+    )
+
+lines = len(st.session_state.get("query_input", "").split("\n")) + 2
 textarea_height = (
     "stretch"
-    if st.session_state.question_input == ""
+    if not st.session_state.get("question_input", "")
     else DEFAULT_QUERY_INPUT_HEIGHT * lines
-)
-
-logger.info(
-    f"textarea_height: {textarea_height}, lines: {lines}, query_input: {st.session_state.query_input}"
 )
 
 with col1:
@@ -395,6 +397,15 @@ def submit_feedback(question, query, new_question, new_query, object, feedback):
 if submit:
     question = st.session_state.question_input
     query = st.session_state.query_input
+
+    if not question.strip() or not query.strip():
+        missing = []
+        if not question.strip():
+            missing.append("reference question")
+        if not query.strip():
+            missing.append("reference SPARQL query")
+        st.warning(f"Please provide a {' and a '.join(missing)} before generating.")
+        st.stop()
 
     logger.info(f'Run new generation for question "{question}" and query "{query}"')
     # logger.info("Question: %s", question)
