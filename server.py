@@ -1,6 +1,5 @@
 import os
 import logging
-import requests
 import json
 import random
 
@@ -11,8 +10,8 @@ from sample_selector import (
     build_samples_by_id,
     build_samples_by_language,
 )
+from utils import call_dynbench, submit_feedback, output_row
 from decouple import config
-# from decouple import Config, RepositoryEnv
 
 import colorlog
 import streamlit as st
@@ -76,44 +75,6 @@ LANGUAGE_CODES = {
 }  # ISO code → display name
 
 
-def call_dynbench(url, question, query, model, complexity="normal", language="en"):
-    """Return (result_dict, error_str). On success error_str is None; on failure result_dict is None."""
-    headers = {}
-    data = {
-        "question": question,
-        "query": query,
-        "model": model,
-        "lang": language,
-        "complexity": complexity,
-        "checks": ["sentence"],
-    }
-
-    try:
-        r = requests.post(url, headers=headers, json=data, timeout=30)
-    except requests.exceptions.ConnectionError as e:
-        return None, f"Connection error: {e}"
-    except requests.exceptions.Timeout:
-        return None, "Request timed out after 30 s"
-    except requests.exceptions.RequestException as e:
-        return None, f"Request failed: {e}"
-
-    if r.status_code != 200:
-        return None, f"HTTP {r.status_code}: {r.text.strip()}"
-
-    try:
-        body = r.json()
-    except Exception as e:
-        return None, f"Could not parse response as JSON: {e} — raw: {r.text[:200]}"
-
-    missing = [
-        k for k in ("transformed_question", "transformed_query") if not body.get(k)
-    ]
-    if missing:
-        return None, f"Response missing field(s): {', '.join(missing)} — body: {body}"
-
-    return body, None
-
-
 # config = Config(RepositoryEnv("config.env"))
 
 if "dynbench" not in st.session_state:
@@ -155,8 +116,14 @@ st.set_page_config(
     # page_icon=Image.open(PAGE_ICON)
 )
 
-with open("css/style_menu_logo.css") as f, open("css/style_github_ribbon.css") as g:
-    st.markdown(f"<style>{f.read()}{g.read()}</style>", unsafe_allow_html=True)
+with (
+    open("css/style_menu_logo.css") as f,
+    open("css/style_github_ribbon.css") as g,
+    open("css/custom.css") as h,
+):
+    st.markdown(
+        f"<style>{f.read()}{g.read()}{h.read()}</style>", unsafe_allow_html=True
+    )
 
 # --- Read URL params early so the sidebar can use them for pre-selection ---
 _sample_id = st.query_params.get("sample_id")
@@ -344,9 +311,7 @@ _record = st.session_state.get("random_record")
 # Only overwrite the textarea contents when the loaded record changes.
 # Using (id, language) as the key means user edits are preserved across
 # all other reruns (widget interactions, sidebar changes, etc.).
-_current_record_key = (
-    (_record["id"], _record.get("language")) if _record else None
-)
+_current_record_key = (_record["id"], _record.get("language")) if _record else None
 if st.session_state.get("_loaded_record_key") != _current_record_key:
     st.session_state["_loaded_record_key"] = _current_record_key
     st.session_state.question_input = _record["question"] if _record else ""
@@ -381,18 +346,11 @@ with col2:
 
 _, _btn_col, _ = st.columns([1, 2, 1])
 with _btn_col:
-    submit = st.button(f":blue[Generate using {MODEL} 🚀]", use_container_width=True)
-
-# --- Output fields ---
-# st.subheader("Output")
-
-# output_1 = st.text_area('New question', value='', height=80, disabled=True)
-# output_2 = st.text_area('New query', value='', height=80, disabled=True)
-
-
-def submit_feedback(question, query, new_question, new_query, object, feedback):
-    pass
-
+    submit = st.button(
+        f"Generate using {MODEL} 🚀",
+        use_container_width=True,
+        key="form_submit_button",
+    )
 
 if submit:
     question = st.session_state.question_input
@@ -408,19 +366,19 @@ if submit:
         st.stop()
 
     logger.info(f'Run new generation for question "{question}" and query "{query}"')
-    # logger.info("Question: %s", question)
-    # logger.info("Query: %s", query)
 
     # call_dynbench(url, question, query, model, complexity="normal", language="en")
-
-    r, error = call_dynbench(
-        st.session_state.dynbench,
-        question,
-        query,
-        MODEL,
-        difficulty,
-        LANGUAGES[language],
-    )
+    with st.spinner(
+        "Generating question-query pair using " + MODEL + "...", show_time=True
+    ):
+        r, error = call_dynbench(
+            st.session_state.dynbench,
+            question,
+            query,
+            MODEL,
+            difficulty,
+            LANGUAGES[language],
+        )
 
     if r:
         st.session_state["new_question"] = r["transformed_question"]
@@ -453,88 +411,42 @@ if "new_question" in st.session_state:
     new_question = st.session_state["new_question"]
     new_query = st.session_state["new_query"]
     detected_language = st.session_state.get("detected_language", "")
+    st.subheader("Generated question-query pair")
+    output_row(
+        "Recognized language of original question",
+        detected_language,
+        "detected_language",
+        question,
+        query,
+        new_question,
+        new_query,
+    )
+    output_row(
+        "Generated question based on the reference question (and query)",
+        new_question,
+        "new_question",
+        question,
+        query,
+        new_question,
+        new_query,
+    )
+    try:
+        _formatted_new_query = sparqlib.format_string(new_query)
+        logger.info(f"Formatted new query: {_formatted_new_query}")
+    except Exception:
+        logger.error(f"Error formatting new query: {new_query}")
+        _formatted_new_query = new_query
+    output_row(
+        "Generated SPARQL query based on the reference query (and question)",
+        "<pre>" + _formatted_new_query + "</pre>",
+        "new_query",
+        question,
+        query,
+        new_question,
+        new_query,
+        is_formatted=True,
+    )
 
-    col1, col2, col3, _ = st.columns([10, 1, 1, 2])
-    with col1:
-        st.subheader("Recognized language of original question")
-        st.text(detected_language)
-    with col2:
-        if st.button(
-            ":green[OK]", key="detected_language_OK", use_container_width=True
-        ):
-            submit_feedback(
-                question, query, new_question, new_query, "detected_language", "OK"
-            )
-    with col3:
-        if st.button(
-            ":red[Wrong!]", key="detected_language_wrong", use_container_width=True
-        ):
-            submit_feedback(
-                question, query, new_question, new_query, "detected_language", "wrong"
-            )
-
-    col1, col2, col3, _ = st.columns([10, 1, 1, 2])
-    with col1:
-        st.subheader("New question")
-        st.text(new_question)
-    with col2:
-        if st.button(":green[OK]", key="new_question_OK", use_container_width=True):
-            submit_feedback(question, query, new_question, new_query, "question", "OK")
-    with col3:
-        if st.button(
-            ":red[Wrong!]", key="new_question_wrong", use_container_width=True
-        ):
-            submit_feedback(
-                question, query, new_question, new_query, "question", "wrong"
-            )
-
-    col1, col2, col3, _ = st.columns([10, 1, 1, 2])
-    with col1:
-        st.subheader("New query")
-        st.text(new_query)
-    with col2:
-        if st.button(":green[OK]", key="new_query_OK", use_container_width=True):
-            submit_feedback(question, query, new_question, new_query, "query", "OK")
-    with col3:
-        if st.button(":red[Wrong!]", key="new_query_wrong", use_container_width=True):
-            submit_feedback(question, query, new_question, new_query, "query", "wrong")
-
-    # st.divider()
-
-    # Feedback section
-    # st.subheader("Feedback")
-    # feedback_rating = st.radio(
-    #     "How would you rate this transformation?",
-    #     ["Please select", "👍 Good", "👎 Not good"],
-    #     key="feedback_rating"
-    # )
-
-    # feedback_text = st.text_area(
-    #     "Additional comments (optional):",
-    #     key="feedback_text"
-    # )
-
-    # if st.button("Submit feedback", key="submit_feedback"):
-    #     if feedback_rating != "Please select":
-    #         feedback_data = {
-    #             "inputs": [question, query],
-    #             "outputs": [r["transformed_question"], r["transformed_query"]],
-    #             "rating": 1 if feedback_rating == "👍 Good" else 0
-    #         }
-
-    #         try:
-    #             feedback_response = requests.post(
-    #                 f"{st.session_state.dynbench}/feedback",
-    #                 json=feedback_data
-    #             )
-    #             if feedback_response.status_code == 200:
-    #                 st.success("Thank you for your feedback!")
-    #             else:
-    #                 st.error(f"Failed to submit feedback: {feedback_response.status_code}")
-    #         except Exception as e:
-    #             st.error(f"Error submitting feedback: {str(e)}")
-    #     else:
-    #         st.warning("Please select a rating before submitting feedback.")
 
 with open("js/change_menu.js", "r") as f:
     javascript = f.read()

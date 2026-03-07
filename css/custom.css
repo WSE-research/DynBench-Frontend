@@ -1,0 +1,34 @@
+.st-key-output_row_detected_language,
+.st-key-output_row_new_question,
+.st-key-output_row_new_query {
+    padding: 1ex !important;
+    border: 1px solid #FFF !important;
+    border-radius: 1ex !important;
+}
+
+.st-key-output_row_detected_language:hover,
+.st-key-output_row_new_question:hover,
+.st-key-output_row_new_query:hover {
+    background-color: #EEF !important;
+
+    /* background color of the first button  */
+    button[kind="secondary"]:hover {
+        background-color: #F9F9D9 !important;
+        border: 1px solid #666 !important;
+    }
+}
+
+.st-key-form_submit_button button p {
+    font-size: 125% !important;
+    font-weight: bold !important;
+}
+
+.st-key-form_submit_button button {
+    background-color: #FFF !important;
+    border: 1px solid #04d2d0 !important;
+}
+
+.st-key-form_submit_button button:hover {
+    background-color: #f9f9f9 !important;
+    border: 1px solid #5a3aa8 !important;
+}
