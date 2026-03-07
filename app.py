@@ -13,6 +13,9 @@ from streamlit.components.v1 import html
 from PIL import Image
 import base64
 
+from wse_logo_rotation import start_wse_logo_rotation, stop_wse_logo_rotation
+
+
 handler = colorlog.StreamHandler()
 handler.setFormatter(
     colorlog.ColoredFormatter(
@@ -66,12 +69,28 @@ LANGUAGES = {
 LANG_BACK = {i: j for i, j in zip(LANGUAGES.values(), LANGUAGES.keys())}
 
 
-VALUES = [
-    {
-        "question": "What is the highest mountain in Germany?",
-        "query": "SELECT ?uri WHERE { ?uri wdt:P31 wd:Q8502 ; wdt:P2044 ?elevation ; wdt:P17 wd:Q183 . } ORDER BY DESC(?elevation) LIMIT 1",
-    },
-]
+# VALUES = [
+#     {
+#         "question": "What is the highest mountain in Germany?",
+#         "query": "SELECT ?uri WHERE { ?uri wdt:P31 wd:Q8502 ; wdt:P2044 ?elevation ; wdt:P17 wd:Q183 . } ORDER BY DESC(?elevation) LIMIT 1",
+#     },
+# ]
+
+st.markdown(
+    """
+    <style>
+    /* Target the container for the running man animation specifically */
+    div[data-testid="stStatusWidget"] svg {
+        display: none !important;
+    }
+    /* Ensure the Stop button remains visible and clickable */
+    div[data-testid="stStatusWidget"] button {
+        display: block !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 
 def call_dynbench(url, question, query, model, complexity="normal", language="en"):
@@ -206,6 +225,8 @@ if submit:
     logger.info(f'Run new generation for question {question}')
     logger.info(f'Query: {query}')
 
+    start_wse_logo_rotation()
+
     r = call_dynbench(
         st.session_state.dynbench,
         question,
@@ -214,6 +235,8 @@ if submit:
         difficulty,
         LANGUAGES[language],
     )
+
+    stop_wse_logo_rotation()
 
     if r and r.get('transformed_question', None) and r.get('transformed_query', None):
         st.session_state['new_question'] = r['transformed_question']
