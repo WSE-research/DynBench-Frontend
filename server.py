@@ -4,6 +4,7 @@ import requests
 import json
 import random
 
+import sparqlib
 import healthcheck
 from sample_selector import (
     select_sample,
@@ -38,6 +39,7 @@ logging.basicConfig(level=logging.INFO, handlers=[handler])
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_QUERY_INPUT_HEIGHT = 24  # pixels
 MODEL = config("MODEL")
 GITHUB_REPO = config(
     "GITHUB_REPO", "https://github.com/WSE-research/DynBench-Frontend.git"
@@ -290,9 +292,19 @@ if _sample_id is not None or _effective_sample_language is not None:
 # Neither param present (or manual filter active): leave random_record as-is.
 
 # --- Main panel ---
+st.title("DynBench: Question-Query Pair Generator")
+st.subheader(
+    "Generate new question-query pairs for overcoming memorization effects during benchmarking LLM-based systems."
+)
+st.write(
+    "Generate new question-query pairs that are compatible with the original question-query pair and have a user-selected difficulty (configurable on the sidebar). The difficulty is measured by the PageRank of the entities in the question-query pair. The PageRank is calculated based on the Wikidata knowledge graph."
+)
 col_title, col_random = st.columns([4, 1])
 with col_title:
-    st.title("Generate new question-query pair")
+    st.write(
+        "Insert your reference question-query pair or click 'Random sample' to use a randomly selected question-query pair."
+    )
+
 with col_random:
     if st.button("Random sample"):
         if "sample_id" in st.query_params:
@@ -325,19 +337,49 @@ with col_random:
             logger.info("Random sample selected from all languages (no filter active)")
         st.rerun()
 
-
 col1, col2 = st.columns(2)
 
 _record = st.session_state.get("random_record")
+# Format the SPARQL query using sparqlib and display it in a text area
+st.session_state.query_input = (
+    sparqlib.format_string(_record["query"]) if _record else ""
+)
+st.session_state.question_input = _record["question"] if _record else ""
+
+lines = (
+    len(st.session_state.query_input.split("\n")) + 2
+)  # one row per line plus a spare row
+textarea_height = (
+    "stretch"
+    if st.session_state.question_input == ""
+    else DEFAULT_QUERY_INPUT_HEIGHT * lines
+)
+
+logger.info(
+    f"textarea_height: {textarea_height}, lines: {lines}, query_input: {st.session_state.query_input}"
+)
+
 with col1:
-    st.session_state.question_input = _record["question"] if _record else ""
-    st.text_input("Question", key="question_input")
+    st.text_area(
+        "Reference question",
+        key="question_input",
+        placeholder="Enter your reference question",
+        help="The question you want to use as a reference for the generation of a new question-query pair.",
+        height=textarea_height,
+    )
 
 with col2:
-    st.session_state.query_input = _record["query"] if _record else ""
-    st.text_input("SPARQL query", key="query_input")
+    st.text_area(
+        "Reference SPARQL query",
+        key="query_input",
+        placeholder="Enter your reference SPARQL query",
+        help="The SPARQL query you want to use as a reference for the generation of a new question-query pair. The SPARQL query should be a valid SPARQL query that can be executed against the Wikidata knowledge graph and is reflecting the meaning of the reference question.",
+        height=textarea_height,
+    )
 
-submit = st.button(f"Generate using {MODEL}")
+_, _btn_col, _ = st.columns([1, 2, 1])
+with _btn_col:
+    submit = st.button(f":blue[Generate using {MODEL} 🚀]", use_container_width=True)
 
 # --- Output fields ---
 # st.subheader("Output")
