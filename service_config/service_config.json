@@ -1,8 +1,8 @@
 {
-  "services": [{
-      "mode": "dockerfile",
-      "port": "40130:8501",
-      "image": "wseresearch/dynbench-frontend",
-      "tag": "latest"
-  }]
+    "services": [{
+        "mode": "dockerfile",
+        "port": "40130:8501",
+        "image": "wseresearch/dynbench-frontend",
+        "tag": "latest"
+    }]
 }
