@@ -1,13 +1,33 @@
+
+:toc:
+:toclevels: 5
+:toc-placement!:
+:source-highlighter: highlight.js
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+:github-repository: https://github.com/WSE-research/DynBench-Frontend
+endif::[]
+
+++++
+<img align="right" role="right" height="128" src="https://github.com/WSE-research/DynBench-Frontend/blob/main/images/dynbench-logo-alpha-logo-only.png?raw=true"/>
+++++
+
 = DynBench Frontend
 
 DynBench is a web application for generating robust benchmark records by transforming question-query pairs using AI models.
 
+
+
 == Features
 
-* Transform natural language questions with SPARQL queries
-* Support for multiple languages (20 languages)
+* Transform natural-language questions with SPARQL queries
+* Support for multiple languages (20 languages, see link:https://github.com/WSE-research/DynBench-Frontend/blob/main/languages.json[languages.json])
 * Adjustable difficulty levels (easy, normal, hard or random)
-* Random sample selection from benchmark datasets
+* Random sample selection from benchmark datasets (see <<Benchmark Datasets>>)
 * Feedback collection for transformations
 
 == Prerequisites
@@ -53,7 +73,6 @@ MODEL=<Your model>
 |----------|-------------|---------|
 | `DYNBENCH` | URL of the DynBench backend service | - |
 | `MODEL` | AI model to use for transformations | - |
-| `GITHUB_REPO` | GitHub repository URL for the fork ribbon | https://github.com/WSE-research/DynBench-Frontend.git |
 
 == Running the Application
 
@@ -66,10 +85,14 @@ MODEL=<Your model>
 
 2. Set up your `.env` file (see <<configuration>>)
 
-3. Run the Streamlit application:
+3. Run the application:
    ```bash
-   streamlit run server.py
+   python run.py
    ```
++
+NOTE: Use `python run.py` instead of `streamlit run server.py`.
+The custom entry point registers the `/health` endpoint on Streamlit's
+internal Tornado server before it starts accepting connections.
 
 4. The application will open in your browser at `http://localhost:8501`
 
@@ -120,6 +143,46 @@ docker-compose up -d
 4. **Generate**: Click the "Generate" button to transform the pair
 5. **Review results**: Check the transformed question and query
 6. **Provide feedback**: Use the OK/Wrong buttons to give feedback on each result
+
+== URL Request Parameters
+
+The application supports the following URL query parameters:
+
+[cols="1,3,2"]
+|===
+| Parameter | Description | Example
+
+| `sample_id`
+| Pre-select a specific benchmark sample by its ID.
+  If the ID matches an entry in the loaded benchmark data, that sample is shown in the input fields.
+  If no entry matches, the input fields are left empty.
+  Clicking *Random sample* removes this parameter from the URL and picks a new sample at random.
+  Takes precedence over `sample_language` when both are present.
+  See the link:https://github.com/WSE-research/DynBench-Frontend/tree/main/benchmarks[`benchmarks` folder] for available IDs (also see <<Benchmark Datasets>>).
+| `?sample_id=train:1`
+
+| `sample_language`
+| Restrict random sample selection to samples whose language matches the given ISO 639-1 code.
+  A random sample from the matching pool is shown on each page load.
+  If no samples exist for the given code, the input fields are left empty.
+  Clicking *Random sample* keeps this parameter in the URL and picks a new sample from the same language pool.
+  Ignored when `sample_id` is also present.
+| `?sample_language=en`
+
+|===
+
+Examples:
+
+* Load sample `train:1` directly: +
+  `http://localhost:8501/?sample_id=train:1`
+* Unknown ID (empty inputs): +
+  `http://localhost:8501/?sample_id=unknown:999`
+* Random English sample: +
+  `http://localhost:8501/?sample_language=en`
+* Random German sample: +
+  `http://localhost:8501/?sample_language=de`
+* Both parameters (`sample_id` wins): +
+  `http://localhost:8501/?sample_id=train:1&sample_language=de`
 
 == Benchmark Datasets
 

@@ -99,19 +99,26 @@ class HealthHandler(RequestHandler):
             )
 
 
-# Patch Server._create_app to inject our /health route.
-# This must be imported before bootstrap.run() is called so the patch is in
-# place when the Server instance first calls _create_app during startup.
-_original_create_app = _st_server.Server._create_app
+# Patch start_listening to inject our /health route.
+#
+# Server.start() calls start_listening(app) as an unqualified module-level
+# name, so Python resolves it from _st_server.__dict__ at call time.
+# Replacing the name here therefore intercepts the call regardless of which
+# code path builds the app — and we receive the fully-constructed Application
+# object directly, which is simpler and more reliable than patching _create_app.
+#
+# Requirement: healthcheck must be imported before bootstrap.run() so the
+# patch is in place before Server.start() is executed.  Use run.py as the
+# entry point instead of `streamlit run server.py`.
+_original_start_listening = _st_server.start_listening
 
 
-def _patched_create_app(self):  # type: ignore[override]
-    app = _original_create_app(self)
-    # In Tornado 6.4+ handlers are stored in app.wildcard_router.rules.
+def _patched_start_listening(app: "tornado.web.Application") -> None:  # type: ignore[name-defined]
+    # In Tornado 6.4+ handlers live in app.wildcard_router.rules.
     # Prepend our route so it is matched before the catch-all static-file handler.
     app.wildcard_router.rules.insert(0, Rule(PathMatches(r"/health"), HealthHandler))
     logger.info("Registered /health endpoint on Streamlit's Tornado server")
-    return app
+    _original_start_listening(app)
 
 
-_st_server.Server._create_app = _patched_create_app
+_st_server.start_listening = _patched_start_listening

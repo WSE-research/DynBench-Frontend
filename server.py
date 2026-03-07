@@ -5,6 +5,11 @@ import json
 import random
 
 import healthcheck
+from sample_selector import (
+    select_sample,
+    build_samples_by_id,
+    build_samples_by_language,
+)
 from decouple import config
 # from decouple import Config, RepositoryEnv
 
@@ -64,15 +69,9 @@ LANGUAGES = {  # display name → ISO code
     "Serbian": "sr",
     "Bulgarian": "bg",
 }
-LANGUAGE_CODES = {code: name for name, code in LANGUAGES.items()}  # ISO code → display name
-
-VALUES = [
-    {
-        "question": "What is the highest mountain in Germany?",
-        "query": "SELECT ?uri WHERE { ?uri wdt:P31 wd:Q8502 ; wdt:P2044 ?elevation ; wdt:P17 wd:Q183 . } ORDER BY DESC(?elevation) LIMIT 1",
-    },
-]
-
+LANGUAGE_CODES = {
+    code: name for name, code in LANGUAGES.items()
+}  # ISO code → display name
 
 
 def call_dynbench(url, question, query, model, complexity="normal", language="en"):
@@ -104,7 +103,9 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
     except Exception as e:
         return None, f"Could not parse response as JSON: {e} — raw: {r.text[:200]}"
 
-    missing = [k for k in ("transformed_question", "transformed_query") if not body.get(k)]
+    missing = [
+        k for k in ("transformed_question", "transformed_query") if not body.get(k)
+    ]
     if missing:
         return None, f"Response missing field(s): {', '.join(missing)} — body: {body}"
 
@@ -120,7 +121,30 @@ if "dynbench" not in st.session_state:
 
     with open("benchmarks/DynQALD.json", "r") as f:
         st.session_state.samples = json.load(f)
-    st.session_state.random_record = random.choice(st.session_state.samples)
+    st.session_state.samples_by_id = build_samples_by_id(st.session_state.samples)
+    st.session_state.samples_by_language = build_samples_by_language(
+        st.session_state.samples
+    )
+    logger.info(
+        "Loaded %d samples. Available IDs: %s",
+        len(st.session_state.samples),
+        ", ".join(st.session_state.samples_by_id.keys()),
+    )
+    logger.info(
+        "Available sample languages: %s",
+        ", ".join(sorted(st.session_state.samples_by_language.keys())),
+    )
+    # Sorted list of (display_name, iso_code) for the sidebar checkboxes.
+    # Falls back to the raw ISO code when no display-name mapping is available.
+    st.session_state.available_sample_languages = sorted(
+        [
+            (LANGUAGE_CODES.get(code, code), code)
+            for code in st.session_state.samples_by_language.keys()
+        ],
+        key=lambda x: x[0],
+    )
+    # No pre-selection: inputs start empty until params or button set a record
+    st.session_state.random_record = None
 
 
 st.set_page_config(
@@ -131,6 +155,20 @@ st.set_page_config(
 
 with open("css/style_menu_logo.css") as f, open("css/style_github_ribbon.css") as g:
     st.markdown(f"<style>{f.read()}{g.read()}</style>", unsafe_allow_html=True)
+
+# --- Read URL params early so the sidebar can use them for pre-selection ---
+_sample_id = st.query_params.get("sample_id")
+_sample_language = st.query_params.get("sample_language")
+
+# When sample_language changes (or appears for the first time), tick the
+# corresponding checkbox — but only when the user has not manually interacted
+# with the checkboxes yet.  Once _lang_filter_manual is True the user's own
+# selection takes full precedence over the URL parameter.
+if not st.session_state.get("_lang_filter_manual", False):
+    if st.session_state.get("_last_sample_language_param") != _sample_language:
+        st.session_state["_last_sample_language_param"] = _sample_language
+        if _sample_language is not None:
+            st.session_state[f"lang_filter_{_sample_language}"] = True
 
 # --- Sidebar ---
 with st.sidebar:
@@ -156,15 +194,54 @@ with st.sidebar:
     st.title("Settings")
 
     difficulty = st.radio(
-        "Select difficulty for the new question:",
+        "Select difficulty for the entities in the generated question-query pair:",
         ["easy", "normal", "hard", "random"],
-        help="- Highest PageRank\n- Same as the original\n- Lowest PageRank\n- Any compatible",
+        index=1,
+        captions=[
+            "Select the compatible entity with highest PageRank",
+            "Similar entity PageRank as the original entities",
+            "Select the compatible entity with lowest PageRank",
+            "Select a compatible entity with a difficulty between the highest and lowest PageRank",
+        ],
+        help='A higher PageRank means a less difficult question-query pair as the entities are more commonly used in the language. The PageRank is calculated based on the Wikidata knowledge graph. Choose "Same as the original" to generate a question-query pair that should have the same difficulty as the original question-query pair. Choose "Any compatible" to generate a question-query pair that is compatible with the original question-query pair and has a difficulty between the highest and lowest PageRank (random).',
     )
 
-    language = st.radio(
-        "Select language for the new question:",
+    language = st.selectbox(
+        "Select language for the to-be-generated question:",
         list(LANGUAGES),
     )
+
+    def _mark_lang_filter_manual():
+        st.session_state["_lang_filter_manual"] = True
+
+    st.subheader(
+        "Filter sample question-query pairs by language:",
+        help="Only selected languages will be considered when clicking 'Random sample'. If none are selected, all languages are used.",
+    )
+    for _display_name, _iso_code in st.session_state.available_sample_languages:
+        # if no sample_language is selected, check all languages
+        if _sample_language is None:
+            st.checkbox(
+                _display_name,
+                key=f"lang_filter_{_iso_code}",
+                on_change=_mark_lang_filter_manual,
+                value=True,
+            )
+        else:
+            # if a sample_language is selected, check the corresponding language
+            if _sample_language == _iso_code:
+                st.checkbox(
+                    _display_name,
+                    key=f"lang_filter_{_iso_code}",
+                    on_change=_mark_lang_filter_manual,
+                )
+            else:
+                st.checkbox(
+                    _display_name,
+                    key=f"lang_filter_{_iso_code}",
+                    on_change=_mark_lang_filter_manual,
+                    value=False,
+                )
 
     st.divider()
 
@@ -174,27 +251,90 @@ with st.sidebar:
     else:
         st.error(f"Backend unreachable: {_backend_status['message']}", icon="🚨")
 
+# --- Resolve the active record from query parameters ---
+# (_sample_id and _sample_language were read before the sidebar block above.)
+#
+# When the user has manually interacted with the language filter checkboxes
+# their selection takes full precedence: the sample_language URL param must
+# no longer influence which record is loaded, so we treat it as absent.
+_effective_sample_language = (
+    None if st.session_state.get("_lang_filter_manual", False) else _sample_language
+)
+
+if _sample_id is not None or _effective_sample_language is not None:
+    # At least one param present: always re-derive the record so the UI
+    # stays in sync with the URL even after unrelated reruns.
+    _record = select_sample(
+        st.session_state.samples,
+        st.session_state.samples_by_id,
+        st.session_state.samples_by_language,
+        sample_id=_sample_id,
+        sample_language=_effective_sample_language,
+        random_fallback=False,
+    )
+    st.session_state.random_record = _record
+    if _record is not None:
+        logger.info(
+            "Selected sample id=%r language=%r via params sample_id=%r sample_language=%r",
+            _record.get("id"),
+            _record.get("language"),
+            _sample_id,
+            _effective_sample_language,
+        )
+    else:
+        logger.warning(
+            "No sample found for sample_id=%r sample_language=%r",
+            _sample_id,
+            _effective_sample_language,
+        )
+# Neither param present (or manual filter active): leave random_record as-is.
 
 # --- Main panel ---
-col_titel, col_random = st.columns([4, 1])
-with col_titel:
+col_title, col_random = st.columns([4, 1])
+with col_title:
     st.title("Generate new question-query pair")
 with col_random:
     if st.button("Random sample"):
-        st.session_state.random_record = random.choice(st.session_state.samples)
+        if "sample_id" in st.query_params:
+            del st.query_params["sample_id"]
+        # Collect languages ticked in the sidebar filter checkboxes.
+        _checked_langs = {
+            code
+            for _, code in st.session_state.available_sample_languages
+            if st.session_state.get(f"lang_filter_{code}", False)
+        }
+        if _checked_langs:
+            _pool = [
+                s for s in st.session_state.samples if s["language"] in _checked_langs
+            ]
+            st.session_state.random_record = random.choice(_pool) if _pool else None
+            logger.info(
+                "Random sample selected from manually filtered languages: %s (pool size: %d)",
+                ", ".join(sorted(_checked_langs)),
+                len(_pool),
+            )
+        else:
+            st.session_state.random_record = select_sample(
+                st.session_state.samples,
+                st.session_state.samples_by_id,
+                st.session_state.samples_by_language,
+                sample_id=None,
+                sample_language=None,
+                random_fallback=True,
+            )
+            logger.info("Random sample selected from all languages (no filter active)")
         st.rerun()
 
 
 col1, col2 = st.columns(2)
 
+_record = st.session_state.get("random_record")
 with col1:
-    # question = st.text_input("Question", value=VALUES[0]["question"], key='question_input')
-    st.session_state.question_input = st.session_state.random_record["question"]
+    st.session_state.question_input = _record["question"] if _record else ""
     st.text_input("Question", key="question_input")
 
 with col2:
-    # query = st.text_input("SPARQL query", value=VALUES[0]["query"], key='query_input')
-    st.session_state.query_input = st.session_state.random_record["query"]
+    st.session_state.query_input = _record["query"] if _record else ""
     st.text_input("SPARQL query", key="query_input")
 
 submit = st.button(f"Generate using {MODEL}")
@@ -246,7 +386,9 @@ if submit:
         st.session_state.pop("new_query", None)
         logger.warning(
             "No question-query generated for question=%r, query=%r — reason: %s",
-            question, query, error,
+            question,
+            query,
+            error,
         )
         st.subheader(":red[Error]")
         st.text("Sorry, no question-query pair was generated.")
@@ -264,11 +406,19 @@ if "new_question" in st.session_state:
         st.subheader("Recognized language of original question")
         st.text(detected_language)
     with col2:
-        if st.button(":green[OK]", key="detected_language_OK", use_container_width=True):
-            submit_feedback(question, query, new_question, new_query, "detected_language", "OK")
+        if st.button(
+            ":green[OK]", key="detected_language_OK", use_container_width=True
+        ):
+            submit_feedback(
+                question, query, new_question, new_query, "detected_language", "OK"
+            )
     with col3:
-        if st.button(":red[Wrong!]", key="detected_language_wrong", use_container_width=True):
-            submit_feedback(question, query, new_question, new_query, "detected_language", "wrong")
+        if st.button(
+            ":red[Wrong!]", key="detected_language_wrong", use_container_width=True
+        ):
+            submit_feedback(
+                question, query, new_question, new_query, "detected_language", "wrong"
+            )
 
     col1, col2, col3, _ = st.columns([10, 1, 1, 2])
     with col1:
