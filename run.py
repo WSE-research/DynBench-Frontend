@@ -11,7 +11,7 @@ from streamlit.web.bootstrap import run
 
 if __name__ == "__main__":
     run(
-        main_script_path="server.py",
+        main_script_path="app.py",
         is_hello=False,
         args=[],
         flag_options={"server.address": "0.0.0.0"},

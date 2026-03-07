@@ -1,5 +1,5 @@
 """
-utils.py — shared utility functions and UI helpers for server.py.
+utils.py — shared utility functions and UI helpers for app.py.
 """
 import logging
 import random

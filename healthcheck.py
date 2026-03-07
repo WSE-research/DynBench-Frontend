@@ -109,7 +109,7 @@ class HealthHandler(RequestHandler):
 #
 # Requirement: healthcheck must be imported before bootstrap.run() so the
 # patch is in place before Server.start() is executed.  Use run.py as the
-# entry point instead of `streamlit run server.py`.
+# entry point instead of `streamlit run app.py`.
 _original_start_listening = _st_server.start_listening
 
 
