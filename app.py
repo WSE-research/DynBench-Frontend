@@ -75,6 +75,9 @@ LANG_BACK = {i: j for i, j in zip(LANGUAGES.values(), LANGUAGES.keys())}
 #         "query": "SELECT ?uri WHERE { ?uri wdt:P31 wd:Q8502 ; wdt:P2044 ?elevation ; wdt:P17 wd:Q183 . } ORDER BY DESC(?elevation) LIMIT 1",
 #     },
 # ]
+with open("css/style_menu_logo.css") as f, open("css/style_github_ribbon.css") as g:
+    st.markdown(f"<style>{f.read()}{g.read()}</style>", unsafe_allow_html=True)
+
 
 st.markdown(
     """
@@ -134,9 +137,6 @@ st.set_page_config(
     page_title=PAGE_TITLE,
     page_icon=Image.open(PAGE_ICON)
 )
-
-with open("css/style_menu_logo.css") as f, open("css/style_github_ribbon.css") as g:
-    st.markdown(f"<style>{f.read()}{g.read()}</style>", unsafe_allow_html=True)
 
 # === Sidebar ===
 with st.sidebar:
@@ -241,6 +241,7 @@ if submit:
     if r and r.get('transformed_question', None) and r.get('transformed_query', None):
         st.session_state['new_question'] = r['transformed_question']
         st.session_state['new_query'] = r['transformed_query']
+        st.session_state.result = r
     else:
         st.session_state.pop('new_question', None)
         st.session_state.pop('new_query', None)
@@ -278,6 +279,17 @@ if 'new_question' in st.session_state:
     with col3:
         if st.button(':red[✗]', key='new_query_wrong', use_container_width=True):
             submit_feedback(question, query, new_question, new_query, 'query', 'wrong')
+
+    st.divider()
+
+    with st.expander("See more details"):
+        replace = st.session_state.result['extra']['selected_replace']
+        replaces = st.session_state.result['extra']['total_candidates']
+        st.write(f"Original entity: {replace['old_entity']} ({replace['old_label']})")
+        st.write(f" Replace entity: {replace['new_entity']} ({replace['new_label']})")
+        st.write(f"Original entity PageRank: {replace['old_pagerank']}")
+        st.write(f" Replace entity PageRank: {replace['new_pagerank']}")
+        st.write(f"Potential replacements found: {replaces}")
 
 
 with open("js/change_menu.js", "r") as f:
