@@ -43,6 +43,14 @@ PAGE_TITLE = 'DynBench: robust benchmark records generator'
 PAGE_ICON  = 'images/dynbench-icon-64.png'
 PAGE_IMAGE = 'images/dynbench-logo-alpha.png'
 
+
+st.set_page_config(
+    layout="wide",
+    page_title=PAGE_TITLE,
+    page_icon=Image.open(PAGE_ICON)
+)
+
+
 LANGUAGES = {
     "English": "en",
     "German": "de",
@@ -69,12 +77,6 @@ LANGUAGES = {
 LANG_BACK = {i: j for i, j in zip(LANGUAGES.values(), LANGUAGES.keys())}
 
 
-# VALUES = [
-#     {
-#         "question": "What is the highest mountain in Germany?",
-#         "query": "SELECT ?uri WHERE { ?uri wdt:P31 wd:Q8502 ; wdt:P2044 ?elevation ; wdt:P17 wd:Q183 . } ORDER BY DESC(?elevation) LIMIT 1",
-#     },
-# ]
 with open("css/style_menu_logo.css") as f, open("css/style_github_ribbon.css") as g:
     st.markdown(f"<style>{f.read()}{g.read()}</style>", unsafe_allow_html=True)
 
@@ -117,8 +119,12 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
         return None
     
 
-if 'dynbench' not in st.session_state:
-    st.session_state['dynbench'] = config("DYNBENCH")
+# One-time running code
+if 'dyn_base_url' not in st.session_state:
+    st.session_state.dyn_base_url  = config('DYNBENCH')
+    st.session_state.transform_url = config('DYNBENCH')+'/transform'
+    st.session_state.language_url  = config('DYNBENCH')+'/detect_language'
+    st.session_state.feedback_url  = config('DYNBENCH')+'/feedback'
 
     with open('benchmarks/DynQALD.json', 'r') as f:
         st.session_state.samples = json.load(f)
@@ -131,12 +137,6 @@ if 'dynbench' not in st.session_state:
     st.session_state.question_input = st.session_state.random_record["question"]
     st.session_state.query_input = st.session_state.random_record["query"]
 
-
-st.set_page_config(
-    layout="wide",
-    page_title=PAGE_TITLE,
-    page_icon=Image.open(PAGE_ICON)
-)
 
 # === Sidebar ===
 with st.sidebar:
@@ -194,6 +194,7 @@ with col_titel:
     st.title("Generate new question-query pair")
 with col_random:
     if st.button('Random sample'):
+        st.session_state.pop('new_question', None)
         selected = {lang for lang in st.session_state.languages if st.session_state[f'checkbox_{lang}']}
         # st.write(selected)
         slice = [i for i in st.session_state.samples if i['language'] in selected]
@@ -228,7 +229,7 @@ if submit:
     start_wse_logo_rotation()
 
     r = call_dynbench(
-        st.session_state.dynbench,
+        st.session_state.transform_url,
         question,
         query,
         MODEL,
@@ -283,13 +284,24 @@ if 'new_question' in st.session_state:
     st.divider()
 
     with st.expander("See more details"):
-        replace = st.session_state.result['extra']['selected_replace']
-        replaces = st.session_state.result['extra']['total_candidates']
-        st.write(f"Original entity: {replace['old_entity']} ({replace['old_label']})")
-        st.write(f" Replace entity: {replace['new_entity']} ({replace['new_label']})")
-        st.write(f"Original entity PageRank: {replace['old_pagerank']}")
-        st.write(f" Replace entity PageRank: {replace['new_pagerank']}")
-        st.write(f"Potential replacements found: {replaces}")
+        for attempt in st.session_state.result['extra']['attempts']:
+            if attempt.get('Status', 'failed') == 'success':
+                for k, v in attempt.items():
+                    st.write(f'{k}: {v}')
+
+        for attempt in st.session_state.result['extra']['attempts']:
+            if attempt.get('Status', 'failed') != 'success':
+                with st.expander(":red[Failed attempt]"):
+                    for k, v in attempt.items():
+                        st.write(f'{k}: {v}')
+        # replace = st.session_state.result['extra']['selected_replace']
+        # replaces = st.session_state.result['extra']['total_candidates']
+        # st.write(f"Original language: {st.session_state.result['extra']['Original language']}")
+        # st.write(f"Original entity: {replace['old_entity']} ({replace['old_label']})")
+        # st.write(f"Replace entity: {replace['new_entity']} ({replace['new_label']})")
+        # st.write(f"Original entity PageRank: {replace['old_pagerank']}")
+        # st.write(f"Replace entity PageRank: {replace['new_pagerank']}")
+        # st.write(f"Potential replacements found: {replaces}")
 
 
 with open("js/change_menu.js", "r") as f:
