@@ -23,7 +23,7 @@ DynBench is a web application for generating robust benchmark records by transfo
 
 * Generate new benchmark items from question-query pairs (natural-language questions with SPARQL queries)
 * Support for generating new questions-query pairs from questions written in multiple languages (20 languages)
-* Adjustable comparability of generated questions through the use of entities for generated questions (importance of entities in generated questions in comparison to is chosen to ensure difficulty to be "easy", "same", "hard", or "random")
+* Adjustable comparability of generated questions through the use of entities for generated questions (importance of entities in generated questions in comparison to is chosen to ensure difficulty to be "easy", "similar", "hard", or "random")
 * Provide random, multilingual samples from benchmark datasets for easier tool exploration
 * Feedback collection for computed transformation steps
 
