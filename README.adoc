@@ -19,6 +19,12 @@ endif::[]
 
 DynBench is a web application for generating robust benchmark records by transforming question-query pairs using AI models.
 
+---
+
+toc::[]
+
+---
+
 == Features
 
 * Generate new benchmark items from question-query pairs (natural-language questions with SPARQL queries)
