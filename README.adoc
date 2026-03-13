@@ -1,14 +1,31 @@
+:toc:
+:toclevels: 5
+:toc-placement!:
+:source-highlighter: highlight.js
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+:github-repository: https://github.com/WSE-research/LoRiS--LLM-generated-Representations-of-SPARQL-queries
+endif::[]
+
+++++
+<img align="right" role="right" height="128" src="https://github.com/WSE-research/DynBench-Frontend/blob/main/images/dynbench-logo-alpha-logo-only.png?raw=true"/>
+++++
+
 = DynBench Frontend
 
 DynBench is a web application for generating robust benchmark records by transforming question-query pairs using AI models.
 
 == Features
 
-* Transform natural language questions with SPARQL queries
-* Support for multiple languages (20 languages)
-* Adjustable difficulty levels (easy, normal, hard or random)
-* Random sample selection from benchmark datasets
-* Feedback collection for transformations
+* Generate new benchmark items from question-query pairs (natural-language questions with SPARQL queries)
+* Support for generating new questions-query pairs from questions written in multiple languages (20 languages)
+* Adjustable comparability of generated questions through the use of entities for generated questions (importance of entities in generated questions in comparison to is chosen to ensure difficulty to be "easy", "same", "hard", or "random")
+* Provide random, multilingual samples from benchmark datasets for easier tool exploration
+* Feedback collection for computed transformation steps
 
 == Prerequisites
 
@@ -24,7 +41,7 @@ git clone <repository-url>
 cd DynBench-Frontend
 ```
 
-### Install dependencies
+=== Install dependencies
 
 Using pip:
 
@@ -47,7 +64,7 @@ DYNBENCH=<Path to LLM transform endpoint>
 MODEL=<Your model>
 ```
 
-### Environment Variables
+=== Environment Variables
 
 [cols="1,2,2"]
 |===
@@ -72,40 +89,45 @@ MODEL=<Your model>
 
 == Running the Application
 
-### Running with Python (Development)
+=== Running with Python (Development)
 
 1. Ensure you have installed the dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
++
+[source,bash]
+----
+pip install -r requirements.txt
+----
 2. Set up your `.env` file (see <<configuration>>)
-
 3. Run the Streamlit application:
-   ```bash
-   streamlit run app.py
-   ```
-
++
+[source,bash]
+----
+streamlit run app.py
+----
 4. The application will open in your browser at `http://localhost:8501`
 
-### Running with Docker
+
+=== Running with Docker
 
 1. Build the Docker image:
-   ```bash
-   docker build -t dynbench-frontend .
-   ```
-
++
+[source,bash]
+----
+docker build -t dynbench-frontend .
+----
 2. Run the container with environment variables:
-   ```bash
-   docker run -p 8501:8501 \
-     -e DYNBENCH=http://your-backend-url:port/transform \
-     -e MODEL=mistral-small \
-     dynbench-frontend
-   ```
++
+[source,bash]
+----
+docker run -p 8501:8501 \
+       -e DYNBENCH=http://your-backend-url:port/transform \
+       -e MODEL=mistral-small \
+       dynbench-frontend
+----
 
 3. The application will be available at `http://localhost:8501`
 
-### Running with Docker Compose (optional)
+=== Running with Docker Compose (optional)
 
 Create a `docker-compose.yml`:
 
@@ -123,6 +145,7 @@ services:
 ```
 
 Then run:
+
 ```bash
 docker-compose up -d
 ```
@@ -170,8 +193,8 @@ This project is licensed under the MIT License.
 
 == Appendix
 
-List of languages by number of speakers in Europe 
-(top 20 from https://en.wikipedia.org/wiki/List_of_languages_by_number_of_speakers_in_Europe)
+=== List of languages by number of speakers in Europe 
+(top 20 according to https://en.wikipedia.org/wiki/List_of_languages_by_number_of_speakers_in_Europe[Wikipedia])
 
 [cols="1,2,1,2,2"]
 |===
