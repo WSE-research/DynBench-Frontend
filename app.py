@@ -1,9 +1,7 @@
 import os
 import logging
-# import requests
 import json
 import random
-import re
 
 from decouple import config
 
@@ -21,7 +19,8 @@ from sample_selector import (
     build_samples_by_id,
     build_samples_by_language,
 )
-from utils import call_dynbench, submit_feedback, output_row, format_sparql
+from utils import call_dynbench, output_row, format_sparql
+from setup import *
 
 handler = colorlog.StreamHandler()
 handler.setFormatter(
@@ -41,50 +40,12 @@ logging.basicConfig(level=logging.INFO, handlers=[handler])
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_QUERY_INPUT_HEIGHT = 24  # pixels
-MODEL = config('MODEL')
-GITHUB_REPO = config(
-    "GITHUB_REPO", "https://github.com/WSE-research/DynBench-Frontend.git"
-)
-
-PAGE_TITLE = 'DynBench: robust benchmark records generator'
-PAGE_ICON  = 'images/dynbench-icon-64.png'
-PAGE_IMAGE = 'images/dynbench-logo-alpha.png'
-
-
 st.set_page_config(
     layout="wide",
     page_title=PAGE_TITLE,
     page_icon=Image.open(PAGE_ICON)
 )
 
-
-LANGUAGES = {  # display name → ISO code
-    "English": "en",
-    "German": "de",
-    "French": "fr",
-    "Russian": "ru",
-    "Ukrainian": "uk",
-    "Italian": "it",
-    "Spanish": "es",
-    "Polish": "pl",
-    "Romanian": "ro",
-    "Dutch": "nl",
-    "Turkish": "tr",
-    "Bavarian": "bar",
-    "Portuguese": "pt",
-    "Hungarian": "hu",
-    "Greek": "el",
-    "Czech": "cs",
-    "Swedish": "sv",
-    "Catalan": "ca",
-    "Serbian": "sr",
-    "Bulgarian": "bg",
-}
-
-LANGUAGE_CODES = {
-    code: name for name, code in LANGUAGES.items()
-}  # ISO code → display name
 
 
 # One-time running code
@@ -93,19 +54,12 @@ if 'dyn_base_url' not in st.session_state:
     st.session_state.transform_url = config('DYNBENCH')+'/transform'
     st.session_state.feedback_url  = config('DYNBENCH')+'/feedback'
 
-    logger.info("DynBench URL: %s", st.session_state.dyn_base_url)
+    logger.info(f'DynBench URL: {st.session_state.dyn_base_url}')
     healthcheck.start_background_check(st.session_state.dyn_base_url)
 
     with open('benchmarks/DynQALD.json', 'r') as f:
         st.session_state.samples = json.load(f)
 
-    # st.session_state.languages = sorted(list({i['language'] for i in st.session_state.samples}))
-    # for lang in st.session_state.languages:
-    #     st.session_state[f'checkbox_{lang}'] = True
-
-    # st.session_state.random_record = random.choice(st.session_state.samples)
-    # st.session_state.question_input = st.session_state.random_record["question"]
-    # st.session_state.query_input = st.session_state.random_record["query"]
     st.session_state.samples_by_id = build_samples_by_id(st.session_state.samples)
     st.session_state.samples_by_language = build_samples_by_language(
         st.session_state.samples
