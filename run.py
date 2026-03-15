@@ -6,6 +6,7 @@ that the /health route is registered on Streamlit's Tornado server at startup,
 without requiring a separate port.
 """
 import healthcheck  # noqa: F401 — must be imported before bootstrap.run()
+import api          # noqa: F401 — must be imported before bootstrap.run()
 
 from streamlit.web.bootstrap import run
 

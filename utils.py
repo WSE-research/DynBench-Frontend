@@ -70,16 +70,20 @@ def submit_feedback(question, query, new_question, new_query, object, feedback):
         st.balloons()
 
 
-def output_row(label, value, key, question, query, new_question, new_query, is_formatted=False):
-    """Render a labelled output text with OK / Wrong! feedback buttons."""
+def output_row(label, value, key, question, query, new_question, new_query, format=None):
+    """Render a labelled output text with OK / Wrong! feedback buttons.
+
+    Args:
+        format: Optional display format for the value. Pass ``"sparql"`` to
+                render the value as a syntax-highlighted SPARQL code block.
+                ``None`` (default) renders the value as styled plain text.
+    """
     with st.container(key=f"output_row_{key}"):
         st.markdown(f"**{label}:**")
         col_text, col_btns = st.columns([6, 4], vertical_alignment="top")
         with col_text:
-            if is_formatted:
-                value = value.replace("\n", "<br>")
-                value = value.replace(" ", "&nbsp;")
-                st.markdown(value, unsafe_allow_html=True)
+            if format == "sparql":
+                st.code(value, language="sparql")
             else:
                 st.markdown(
                     f"<p style='font-size: 125%;'>{value}</p>", unsafe_allow_html=True

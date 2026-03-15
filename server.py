@@ -383,6 +383,7 @@ if submit:
     if r:
         st.session_state["new_question"] = r["transformed_question"]
         st.session_state["new_query"] = r["transformed_query"]
+        st.session_state["response_data"] = r
         detected_code = (
             r.get("detected_language")
             or r.get("original_language")
@@ -438,14 +439,47 @@ if "new_question" in st.session_state:
         _formatted_new_query = new_query
     output_row(
         "Generated SPARQL query based on the reference query (and question)",
-        "<pre>" + _formatted_new_query + "</pre>",
+        _formatted_new_query,
         "new_query",
         question,
         query,
         new_question,
         new_query,
-        is_formatted=True,
+        format="sparql",
     )
+
+    with st.expander("Full response data"):
+        _FIELD_LABELS = {
+            "original_question":  "Reference question",
+            "original_query":     "Reference SPARQL query",
+            "transformed_question": "Generated question",
+            "transformed_query":  "Generated SPARQL query",
+            "old_pagerank":       "Pagerank of entity in reference question",
+            "new_pagerank":       "Pagerank of entity in generated question",
+            "extra":              "Raw data",
+        }
+        _response_data = st.session_state.get("response_data", {})
+        for _key, _raw_value in _response_data.items():
+            _label = _FIELD_LABELS.get(_key, _key)
+            st.markdown(f"**{_label}**")
+            if _key in ("original_query", "transformed_query"):
+                try:
+                    _display_value = sparqlib.format_string(str(_raw_value))
+                except Exception:
+                    _display_value = str(_raw_value)
+                st.code(_display_value, language="sparql")
+            elif _key == "extra":
+                try:
+                    _pretty = json.dumps(
+                        _raw_value if not isinstance(_raw_value, str) else json.loads(_raw_value),
+                        indent=2,
+                        ensure_ascii=False,
+                    )
+                except Exception:
+                    _pretty = str(_raw_value)
+                st.code(_pretty, language="json")
+            else:
+                st.text(str(_raw_value))
 
 
 with open("js/change_menu.js", "r") as f:
