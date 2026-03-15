@@ -352,6 +352,8 @@ with _btn_col:
         key="form_submit_button",
     )
 
+
+
 if submit:
     question = st.session_state.question_input
     query = st.session_state.query_input
@@ -448,6 +450,30 @@ if "new_question" in st.session_state:
         format="sparql",
     )
 
+# add some vertical space
+st.write("")
+st.write("")
+
+with st.expander("API request (curl)"):
+    _curl_payload = {
+        "question": st.session_state.get("question_input", ""),
+        "query": st.session_state.get("query_input", ""),
+        "model": MODEL,
+        "complexity": difficulty,
+        "language": LANGUAGES[language],
+    }
+    _curl_json = json.dumps(_curl_payload, indent=2, ensure_ascii=False)
+    _host = st.context.headers.get("Host", "localhost:8501")
+    _proto = st.context.headers.get("X-Forwarded-Proto", "http")
+    _api_url = f"{_proto}://{_host}/api/transform"
+    st.code(
+        f"curl -X POST '{_api_url}' \\\n"
+        f"  -H 'Content-Type: application/json' \\\n"
+        f"  -d '{_curl_json}'",
+        language="bash",
+    )    
+
+if "new_question" in st.session_state:
     with st.expander("Full response data"):
         _FIELD_LABELS = {
             "original_question":  "Reference question",
