@@ -46,6 +46,35 @@ st.set_page_config(
     page_icon=Image.open(PAGE_ICON)
 )
 
+PAGE_TITLE = "DynBench: robust benchmark records generator"
+# PAGE_IMAGE = 'images/dynbench.png'
+PAGE_IMAGE = "images/dynbench-logo-alpha-logo-only.png"
+
+LANGUAGES = {  # display name → ISO code
+    "English": "en",
+    "German": "de",
+    "French": "fr",
+    "Russian": "ru",
+    "Ukrainian": "uk",
+    "Italian": "it",
+    "Spanish": "es",
+    "Polish": "pl",
+    "Romanian": "ro",
+    "Dutch": "nl",
+    "Turkish": "tr",
+    "Bavarian": "bar",
+    "Portuguese": "pt",
+    "Hungarian": "hu",
+    "Greek": "el",
+    "Czech": "cs",
+    "Swedish": "sv",
+    "Catalan": "ca",
+    "Serbian": "sr",
+    "Bulgarian": "bg",
+}
+LANGUAGE_CODES = {
+    code: name for name, code in LANGUAGES.items()
+}  # ISO code → display name
 
 
 # One-time running code
@@ -85,6 +114,12 @@ if 'dyn_base_url' not in st.session_state:
     # No pre-selection: inputs start empty until params or button set a record
     st.session_state.random_record = None
 
+
+st.set_page_config(
+    layout="wide",
+    page_title=PAGE_TITLE,
+    page_icon=Image.open(PAGE_IMAGE),
+)
 
 with (
     open("css/style_menu_logo.css") as f,
@@ -180,16 +215,18 @@ with st.sidebar:
 
     difficulty = st.radio(
         "Select difficulty for the entities in the generated question-query pair:",
-        ["easy", "normal", "hard", "random"],
+        ["easy", "similar", "hard", "random"],
         index=1,
         captions=[
             "Select the compatible entity with highest PageRank",
-            "Similar entity PageRank as the original entities",
+            "Use similar entity PageRanks in the generated question as in the reference question",
             "Select the compatible entity with lowest PageRank",
             "Select a compatible entity with a difficulty between the highest and lowest PageRank",
         ],
         help='A higher PageRank means a less difficult question-query pair as the entities are more commonly used in the language. The PageRank is calculated based on the Wikidata knowledge graph. Choose "Same as the original" to generate a question-query pair that should have the same difficulty as the original question-query pair. Choose "Any compatible" to generate a question-query pair that is compatible with the original question-query pair and has a difficulty between the highest and lowest PageRank (random).',
     )
+    if difficulty == "similar":
+        difficulty = "normal"
 
     language = st.selectbox(
         "Select language for the to-be-generated question:",
@@ -391,20 +428,6 @@ with _btn_col:
     )
 
 
-# col1, col2 = st.columns([2, 3])
-
-# with col1:
-#     st.text_input("Question", key='question_input')
-
-# with col2:
-#     st.text_input("SPARQL query", key='query_input')
-
-# submit = st.button("Generate")
-
-
-def submit_feedback(question, query, new_question, new_query, object, feedback):
-    pass
-
 
 if submit:
     question = st.session_state.question_input
@@ -459,7 +482,16 @@ if submit:
     if r:
         st.session_state["new_question"] = r["transformed_question"]
         st.session_state["new_query"] = r["transformed_query"]
-        st.session_state.result = r
+        st.session_state["response_data"] = r
+        
+        # dump the response data formatted as JSON to the log
+        logger.info("response data: %r", json.dumps(r, indent=2, ensure_ascii=False))
+        
+        # log all key of the response data to the log
+        logger.info("response data keys: %r", list(r.keys()))
+        
+        st.session_state["selected_replace"] = r["extra"].get("selected_replace", {})
+        logger.info("selected_replace stored: %s", json.dumps(st.session_state["selected_replace"], indent=2, ensure_ascii=False))
         detected_code = (
             r['extra'].get('Original language')
             or r.get("detected_language")
@@ -473,6 +505,7 @@ if submit:
     else:
         st.session_state.pop("new_question", None)
         st.session_state.pop("new_query", None)
+        st.session_state.pop("selected_replace", None)
         logger.warning(
             "No question-query generated for question=%r, query=%r — reason: %s",
             question,
@@ -500,6 +533,49 @@ if 'new_question' in st.session_state:
         new_question,
         new_query,
     )
+    _sr = st.session_state.get("selected_replace") or {}
+    if _sr:
+        def _entity_text(label, entity, pagerank):
+            """Build an HTML string with a Wikidata hyperlink for *entity*.
+
+            The value is rendered inside a <p> tag with unsafe_allow_html=True,
+            so we produce <a> elements rather than Markdown link syntax.
+            entity is typically "wd:Q1234"; the QID after the colon is used to
+            build the Wikidata URL.
+            """
+            qid = entity.split(":")[-1] if entity else ""
+            wd_url = f"https://www.wikidata.org/wiki/{qid}" if qid else ""
+            a = f'<a href="{wd_url}" target="_blank" rel="noopener noreferrer">'
+            if label and wd_url:
+                linked = f'{a}{label} ({entity}</a>)'
+            elif label:
+                linked = label + (f" ({entity})" if entity else "")
+            elif wd_url:
+                linked = f'{a}{entity}</a>'
+            else:
+                linked = entity or ""
+            if pagerank != "":
+                linked += f" — PageRank: {pagerank}"
+            return linked
+
+        output_row(
+            "Recognized entity in the reference question",
+            _entity_text(_sr.get("old_label", ""), _sr.get("old_entity", ""), _sr.get("old_pagerank", "")),
+            "old_entity",
+            question,
+            query,
+            new_question,
+            new_query,
+        )
+        output_row(
+            "Entity used in the generated question",
+            _entity_text(_sr.get("new_label", ""), _sr.get("new_entity", ""), _sr.get("new_pagerank", "")),
+            "new_entity",
+            question,
+            query,
+            new_question,
+            new_query,
+        )
     output_row(
         "Generated question based on the reference question (and query)",
         new_question,
@@ -517,13 +593,13 @@ if 'new_question' in st.session_state:
         _formatted_new_query = new_query
     output_row(
         "Generated SPARQL query based on the reference query (and question)",
-        "<pre>" + _formatted_new_query + "</pre>",
+        _formatted_new_query,
         "new_query",
         question,
         query,
         new_question,
         new_query,
-        is_formatted=True,
+        format="sparql",
     )
     # col1, col2, col3, _ =  st.columns([10, 1, 1, 2])
     # with col1:
@@ -568,6 +644,63 @@ if 'new_question' in st.session_state:
         # st.write(f"Original entity PageRank: {replace['old_pagerank']}")
         # st.write(f"Replace entity PageRank: {replace['new_pagerank']}")
         # st.write(f"Potential replacements found: {replaces}")
+
+# add some vertical space
+st.write("")
+st.write("")
+
+with st.expander("API request (curl)"):
+    _curl_payload = {
+        "question": st.session_state.get("question_input", ""),
+        "query": st.session_state.get("query_input", ""),
+        "model": MODEL,
+        "complexity": difficulty,
+        "language": LANGUAGES[language],
+    }
+    _curl_json = json.dumps(_curl_payload, indent=2, ensure_ascii=False)
+    _host = st.context.headers.get("Host", "localhost:8501")
+    _proto = st.context.headers.get("X-Forwarded-Proto", "http")
+    _api_url = f"{_proto}://{_host}/api/transform"
+    st.code(
+        f"curl -X POST '{_api_url}' \\\n"
+        f"  -H 'Content-Type: application/json' \\\n"
+        f"  -d '{_curl_json}'",
+        language="bash",
+    )    
+
+if "new_question" in st.session_state:
+    with st.expander("Full response data"):
+        _FIELD_LABELS = {
+            "original_question":  "Reference question",
+            "original_query":     "Reference SPARQL query",
+            "transformed_question": "Generated question",
+            "transformed_query":  "Generated SPARQL query",
+            "old_pagerank":       "Pagerank of entity in reference question",
+            "new_pagerank":       "Pagerank of entity in generated question",
+            "extra":              "Raw data",
+        }
+        _response_data = st.session_state.get("response_data", {})
+        for _key, _raw_value in _response_data.items():
+            _label = _FIELD_LABELS.get(_key, _key)
+            st.markdown(f"**{_label}**")
+            if _key in ("original_query", "transformed_query"):
+                try:
+                    _display_value = sparqlib.format_string(str(_raw_value))
+                except Exception:
+                    _display_value = str(_raw_value)
+                st.code(_display_value, language="sparql")
+            elif _key == "extra":
+                try:
+                    _pretty = json.dumps(
+                        _raw_value if not isinstance(_raw_value, str) else json.loads(_raw_value),
+                        indent=2,
+                        ensure_ascii=False,
+                    )
+                except Exception:
+                    _pretty = str(_raw_value)
+                st.code(_pretty, language="json")
+            else:
+                st.text(str(_raw_value))
 
 
 with open("js/change_menu.js", "r") as f:

@@ -1,4 +1,6 @@
 .st-key-output_row_detected_language,
+.st-key-output_row_old_entity,
+.st-key-output_row_new_entity,
 .st-key-output_row_new_question,
 .st-key-output_row_new_query {
     padding: 1ex !important;
@@ -7,6 +9,8 @@
 }
 
 .st-key-output_row_detected_language:hover,
+.st-key-output_row_old_entity:hover,
+.st-key-output_row_new_entity:hover,
 .st-key-output_row_new_question:hover,
 .st-key-output_row_new_query:hover {
     background-color: #EEF !important;
