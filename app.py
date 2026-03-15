@@ -20,7 +20,7 @@ from sample_selector import (
     build_samples_by_language,
 )
 from utils import call_dynbench, output_row, format_sparql
-from setup import *
+from settings import *
 
 handler = colorlog.StreamHandler()
 handler.setFormatter(
@@ -46,35 +46,35 @@ st.set_page_config(
     page_icon=Image.open(PAGE_ICON)
 )
 
-PAGE_TITLE = "DynBench: robust benchmark records generator"
-# PAGE_IMAGE = 'images/dynbench.png'
-PAGE_IMAGE = "images/dynbench-logo-alpha-logo-only.png"
+# PAGE_TITLE = "DynBench: robust benchmark records generator"
+# # PAGE_IMAGE = 'images/dynbench.png'
+# PAGE_IMAGE = "images/dynbench-logo-alpha-logo-only.png"
 
-LANGUAGES = {  # display name → ISO code
-    "English": "en",
-    "German": "de",
-    "French": "fr",
-    "Russian": "ru",
-    "Ukrainian": "uk",
-    "Italian": "it",
-    "Spanish": "es",
-    "Polish": "pl",
-    "Romanian": "ro",
-    "Dutch": "nl",
-    "Turkish": "tr",
-    "Bavarian": "bar",
-    "Portuguese": "pt",
-    "Hungarian": "hu",
-    "Greek": "el",
-    "Czech": "cs",
-    "Swedish": "sv",
-    "Catalan": "ca",
-    "Serbian": "sr",
-    "Bulgarian": "bg",
-}
-LANGUAGE_CODES = {
-    code: name for name, code in LANGUAGES.items()
-}  # ISO code → display name
+# LANGUAGES = {  # display name → ISO code
+#     "English": "en",
+#     "German": "de",
+#     "French": "fr",
+#     "Russian": "ru",
+#     "Ukrainian": "uk",
+#     "Italian": "it",
+#     "Spanish": "es",
+#     "Polish": "pl",
+#     "Romanian": "ro",
+#     "Dutch": "nl",
+#     "Turkish": "tr",
+#     "Bavarian": "bar",
+#     "Portuguese": "pt",
+#     "Hungarian": "hu",
+#     "Greek": "el",
+#     "Czech": "cs",
+#     "Swedish": "sv",
+#     "Catalan": "ca",
+#     "Serbian": "sr",
+#     "Bulgarian": "bg",
+# }
+# LANGUAGE_CODES = {
+#     code: name for name, code in LANGUAGES.items()
+# }  # ISO code → display name
 
 
 # One-time running code

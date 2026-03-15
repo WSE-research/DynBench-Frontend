@@ -9,7 +9,8 @@ GITHUB_REPO = config(
 
 PAGE_TITLE = 'DynBench: robust benchmark records generator'
 PAGE_ICON  = 'images/dynbench-icon-64.png'
-PAGE_IMAGE = 'images/dynbench-logo-alpha.png'
+# PAGE_IMAGE = 'images/dynbench-logo-alpha.png'
+PAGE_IMAGE = "images/dynbench-logo-alpha-logo-only.png"
 
 LANGUAGES = {  # display name → ISO code
     "English": "en",
