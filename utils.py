@@ -53,6 +53,41 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
     except Exception as e:
         return None, f"Could not parse response as JSON: {e} — raw: {r.text[:200]}"
 
+    logger.debug("Backend response keys: %s", list(body.keys()))
+
+    # Find the best attempt (first success, or last attempt as fallback).
+    _attempt = next(
+        (a for a in body.get("attempts", []) if a.get("Status") == "success"),
+        (body.get("attempts") or [None])[-1],
+    )
+
+    # Normalise: some backend versions return the result inside the `attempts`
+    # list with title-case keys rather than as top-level snake_case keys.
+    # Promote the values so the rest of the application can always rely on
+    # `body["transformed_question"]` and `body["transformed_query"]`.
+    if not body.get("transformed_question") and _attempt:
+        body["transformed_question"] = _attempt.get("Transformed question", "")
+    if not body.get("transformed_query") and _attempt:
+        body["transformed_query"] = _attempt.get("Transformed query", "")
+
+    # Normalise selected_replace: build it from the successful attempt's fields
+    # when it is absent at the top level.
+    if not body.get("selected_replace") and _attempt:
+        body["selected_replace"] = {
+            "old_entity":   _attempt.get("Original entity", ""),
+            "new_entity":   _attempt.get("New entity", ""),
+            "old_label":    _attempt.get("Label for original entity", ""),
+            "new_label":    _attempt.get("Label for new entity", ""),
+            "old_pagerank": _attempt.get("Original entity PageRank", ""),
+            "new_pagerank": _attempt.get("New entity PageRank", ""),
+        }
+
+    logger.info(
+        "call_dynbench result: transformed_question=%r selected_replace=%r",
+        (body.get("transformed_question") or "")[:80],
+        body.get("selected_replace"),
+    )
+
     missing = [
         k for k in ("transformed_question", "transformed_query") if not body.get(k)
     ]
