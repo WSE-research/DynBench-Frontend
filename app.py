@@ -3,6 +3,8 @@ import logging
 import json
 import random
 
+from enum import Enum
+
 from decouple import config
 
 import colorlog
@@ -46,36 +48,28 @@ st.set_page_config(
     page_icon=Image.open(PAGE_ICON)
 )
 
-# PAGE_TITLE = "DynBench: robust benchmark records generator"
-# # PAGE_IMAGE = 'images/dynbench.png'
-# PAGE_IMAGE = "images/dynbench-logo-alpha-logo-only.png"
 
-# LANGUAGES = {  # display name → ISO code
-#     "English": "en",
-#     "German": "de",
-#     "French": "fr",
-#     "Russian": "ru",
-#     "Ukrainian": "uk",
-#     "Italian": "it",
-#     "Spanish": "es",
-#     "Polish": "pl",
-#     "Romanian": "ro",
-#     "Dutch": "nl",
-#     "Turkish": "tr",
-#     "Bavarian": "bar",
-#     "Portuguese": "pt",
-#     "Hungarian": "hu",
-#     "Greek": "el",
-#     "Czech": "cs",
-#     "Swedish": "sv",
-#     "Catalan": "ca",
-#     "Serbian": "sr",
-#     "Bulgarian": "bg",
-# }
-# LANGUAGE_CODES = {
-#     code: name for name, code in LANGUAGES.items()
-# }  # ISO code → display name
+# class States(Enum):
+#     STARTUP = 1
+#     NO_RESULT = 2
+#     SHOW_RESULT = 3
+#     SHOW_ERROR = 4
 
+
+# # state management
+# if 'state' not in st.session_state:
+#     st.session_state.state = States.STARTUP
+#     # call init sequence initialize(args)
+
+# match st.session_state.state:
+#     case States.STARTUP:
+#         pass # raise error
+#     case States.NO_RESULT:
+#         pass # show input fields
+#     case States.NO_RESULT:
+#         pass # show input and output
+#     case States.NO_RESULT:
+#         pass # show error
 
 # One-time running code
 if 'dyn_base_url' not in st.session_state:
@@ -493,11 +487,11 @@ if submit:
         st.session_state["selected_replace"] = r["extra"].get("selected_replace", {})
         logger.info("selected_replace stored: %s", json.dumps(st.session_state["selected_replace"], indent=2, ensure_ascii=False))
         detected_code = (
-            r['extra'].get('Original language')
-            or r.get("detected_language")
-            or r.get("original_language")
-            or r.get("source_language")
-            or r.get("lang")
+            r.get('extra', {}).get('Original language')
+            or r.get('extra', {}).get("detected_language")
+            or r.get('extra', {}).get("original_language")
+            or r.get("source_language", None)
+            or r.get("lang", None)
             or LANGUAGES[language]
         )
         detected_name = LANGUAGE_CODES.get(detected_code, detected_code)
@@ -625,17 +619,17 @@ if 'new_question' in st.session_state:
 
     st.divider()
 
-    with st.expander("See more details"):
-        for attempt in st.session_state.result['extra']['attempts']:
-            if attempt.get('Status', 'failed') == 'success':
-                for k, v in attempt.items():
-                    st.write(f'{k}: {v}')
-
-        for attempt in st.session_state.result['extra']['attempts']:
-            if attempt.get('Status', 'failed') != 'success':
-                with st.expander(":red[Failed attempt]"):
-                    for k, v in attempt.items():
-                        st.write(f'{k}: {v}')
+#    with st.expander("See more details"):
+#        for attempt in st.session_state.result['extra']['attempts']:
+#            if attempt.get('Status', 'failed') == 'success':
+#                for k, v in attempt.items():
+#                    st.write(f'{k}: {v}')
+#
+#        for attempt in st.session_state.result['extra']['attempts']:
+#            if attempt.get('Status', 'failed') != 'success':
+#                with st.expander(":red[Failed attempt]"):
+#                    for k, v in attempt.items():
+#                        st.write(f'{k}: {v}')
         # replace = st.session_state.result['extra']['selected_replace']
         # replaces = st.session_state.result['extra']['total_candidates']
         # st.write(f"Original language: {st.session_state.result['extra']['Original language']}")
