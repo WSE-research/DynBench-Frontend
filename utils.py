@@ -101,12 +101,12 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
     return body, None
 
 
-def submit_feedback(question, query, new_question, new_query, key, value, feedback):
+def submit_feedback(question, query, new_question, new_query, object, value, feedback):
     logger.info(f"Submit feedback for {object}: {feedback}")
 
     feedback = {
-        'inputs': [question, query, object,],
-        'outputs': [new_question, new_query, key, value],
+        'inputs': [question, query, ],
+        'outputs': [new_question, new_query, object, value, ],
         'rating': feedback,
     }
     try:
