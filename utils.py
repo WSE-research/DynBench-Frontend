@@ -9,7 +9,7 @@ import requests
 # import sparqlib
 import streamlit as st
 
-from settings import FEEDBACK_URL
+from settings import FEEDBACK_URL, MODELS_URL
 
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,13 @@ _FEEDBACK_MESSAGES = [
     "Amazing contribution! Your feedback fuels continuous improvement! 🔥",
     "Cheers to you! Every piece of feedback brings us closer to perfection! 🏆",
 ]
+
+def get_models():
+    try:
+        resp = requests.get(MODELS_URL).json()
+        return resp['models']
+    except:
+        return ['openai/gpt-4o',]
 
 
 def call_dynbench(url, question, query, model, complexity="normal", language="en"):
@@ -143,7 +150,7 @@ def output_row(label, value, key, question, query, new_question, new_query, form
                 unsafe_allow_html=True,
             )
         with col_btns:
-            col_ok, col_wrong = st.columns(2, vertical_alignment="top")
+            col_ok, col_wrong = st.columns(2, vertical_alignment="center")
             with col_ok:
                 if st.button(
                     ":green[👍 Correct]",

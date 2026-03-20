@@ -10,6 +10,7 @@ GITHUB_REPO = config(
 DYNBENCH_URL = config('DYNBENCH')
 TRANSFORM_URL = DYNBENCH_URL + '/transform'
 FEEDBACK_URL = DYNBENCH_URL + '/feedback'
+MODELS_URL = DYNBENCH_URL + '/v1/models'
 
 PAGE_TITLE = 'DynBench: robust benchmark records generator'
 PAGE_ICON  = 'images/dynbench-icon-64.png'

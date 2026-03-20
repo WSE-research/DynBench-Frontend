@@ -2,6 +2,7 @@ import os
 import logging
 import json
 import random
+import requests
 
 from enum import Enum
 
@@ -21,7 +22,13 @@ from sample_selector import (
     build_samples_by_id,
     build_samples_by_language,
 )
-from utils import call_dynbench, output_row, format_sparql, submit_feedback
+from utils import (
+    call_dynbench, 
+    output_row, 
+    format_sparql, 
+    submit_feedback,
+    get_models
+)
 from settings import *
 
 handler = colorlog.StreamHandler()
@@ -71,11 +78,14 @@ st.set_page_config(
 #     case States.NO_RESULT:
 #         pass # show error
 
+
 # One-time running code
 if 'dyn_base_url' not in st.session_state:
     st.session_state.dyn_base_url  = config('DYNBENCH')
     st.session_state.transform_url = config('DYNBENCH')+'/transform'
     st.session_state.feedback_url  = config('DYNBENCH')+'/feedback'
+
+    st.session_state.models_list = get_models()
 
     logger.info(f'DynBench URL: {st.session_state.dyn_base_url}')
     healthcheck.start_background_check(st.session_state.dyn_base_url)
@@ -206,6 +216,10 @@ with st.sidebar:
     #     ["easy", "normal", "hard", "random"],
     #     help='**Options are:**\n- Easy: possible highest PageRank\n- Normal: same as the original\n- Hard: possible lowest PageRank\n- Random: any compatible',
     # )
+    model = st.selectbox(
+        "Select LLM to generate new question:",
+        st.session_state.models_list,
+    )
 
     difficulty = st.radio(
         "Select difficulty for the entities in the generated question-query pair:",
@@ -419,7 +433,7 @@ with col2:
 _, _btn_col, _ = st.columns([1, 2, 1])
 with _btn_col:
     submit = st.button(
-        f"Generate using {MODEL} 🚀",
+        f"Generate using {model.split('/')[-1] if '/' in model else model} 🚀",
         use_container_width=True,
         key="form_submit_button",
     )
@@ -446,13 +460,13 @@ if submit:
     start_wse_logo_rotation()
 
     with st.spinner(
-        "Generating question-query pair using " + MODEL + "...", show_time=True
+        "Generating question-query pair using " + model + "...", show_time=True
     ):
         r, error = call_dynbench(
             st.session_state.transform_url,
             question,
             query,
-            MODEL,
+            model,
             difficulty,
             LANGUAGES[language],
         )
@@ -666,7 +680,7 @@ with st.expander("API request (curl)"):
     _curl_payload = {
         "question": st.session_state.get("question_input", ""),
         "query": st.session_state.get("query_input", ""),
-        "model": MODEL,
+        "model": model,
         "complexity": difficulty,
         "language": LANGUAGES[language],
     }
