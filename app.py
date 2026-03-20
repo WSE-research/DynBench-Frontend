@@ -346,8 +346,11 @@ with col_title:
 
 with col_random:
     if st.button("Random sample"):
-        if "sample_id" in st.query_params:
-            del st.query_params["sample_id"]
+        st.query_params.pop("sample_id", None)
+        st.query_params.pop("new_question", None)
+        
+        # if "sample_id" in st.query_params:
+        #     del st.query_params["sample_id"]
         # Collect languages ticked in the sidebar filter checkboxes.
         _checked_langs = {
             code
@@ -420,7 +423,6 @@ with _btn_col:
         use_container_width=True,
         key="form_submit_button",
     )
-
 
 
 if submit:

@@ -7,6 +7,10 @@ GITHUB_REPO = config(
     "GITHUB_REPO", "https://github.com/WSE-research/DynBench-Frontend.git"
 )
 
+DYNBENCH_URL = config('DYNBENCH')
+TRANSFORM_URL = DYNBENCH_URL + '/transform'
+FEEDBACK_URL = DYNBENCH_URL + '/feedback'
+
 PAGE_TITLE = 'DynBench: robust benchmark records generator'
 PAGE_ICON  = 'images/dynbench-icon-64.png'
 # PAGE_IMAGE = 'images/dynbench-logo-alpha.png'

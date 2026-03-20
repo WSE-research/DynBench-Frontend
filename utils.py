@@ -9,6 +9,9 @@ import requests
 # import sparqlib
 import streamlit as st
 
+from settings import FEEDBACK_URL
+
+
 logger = logging.getLogger(__name__)
 
 _FEEDBACK_MESSAGES = [
@@ -38,7 +41,7 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
     }
 
     try:
-        r = requests.post(url, headers=headers, json=data, timeout=30)
+        r = requests.post(url, headers=headers, json=data, timeout=60)
     except requests.exceptions.ConnectionError as e:
         return None, f"Connection error: {e}"
     except requests.exceptions.Timeout:
@@ -98,8 +101,19 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
     return body, None
 
 
-def submit_feedback(question, query, new_question, new_query, object, feedback):
+def submit_feedback(question, query, new_question, new_query, key, value, feedback):
     logger.info(f"Submit feedback for {object}: {feedback}")
+
+    feedback = {
+        'inputs': [question, query, object,],
+        'outputs': [new_question, new_query, key, value],
+        'rating': feedback,
+    }
+    try:
+        requests.post(FEEDBACK_URL, headers={}, json=feedback, timeout=30)
+    except:
+        return
+
     st.session_state["feedback_count"] = st.session_state.get("feedback_count", 0) + 1
     st.toast(random.choice(_FEEDBACK_MESSAGES), icon="🎉")
     if st.session_state["feedback_count"] % 3 == 0:
@@ -137,7 +151,7 @@ def output_row(label, value, key, question, query, new_question, new_query, form
                     width="stretch",
                     help="The generated data is CORRECT.",
                 ):
-                    submit_feedback(question, query, new_question, new_query, key, "OK")
+                    submit_feedback(question, query, new_question, new_query, key, value, 1)
             with col_wrong:
                 if st.button(
                     ":red[👎 Wrong]",
@@ -145,7 +159,7 @@ def output_row(label, value, key, question, query, new_question, new_query, form
                     width="stretch",
                     help="The generated data is INCORRECT.",
                 ):
-                    submit_feedback(question, query, new_question, new_query, key, "wrong")
+                    submit_feedback(question, query, new_question, new_query, key, value, 0)
 
 
 def format_sparql(query: str) -> str:
