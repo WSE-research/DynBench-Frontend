@@ -21,7 +21,7 @@ from sample_selector import (
     build_samples_by_id,
     build_samples_by_language,
 )
-from utils import call_dynbench, output_row, format_sparql
+from utils import call_dynbench, output_row, format_sparql, submit_feedback
 from settings import *
 
 handler = colorlog.StreamHandler()
@@ -597,6 +597,23 @@ if 'new_question' in st.session_state:
         new_query,
         format="sparql",
     )
+
+    _, _btn_col, _ = st.columns([1, 2, 1])
+    with _btn_col:
+        if st.button(
+            ":green[👍 Everything is OK]",
+            use_container_width=True,
+            key="bt_everything_ok",
+        ):
+            submit_feedback(
+                question, 
+                query, 
+                new_question, 
+                new_query, 
+                'everything', 
+                f'detected_language: {detected_language}', 
+                1
+            )
     # col1, col2, col3, _ =  st.columns([10, 1, 1, 2])
     # with col1:
     #     st.subheader("New question")
