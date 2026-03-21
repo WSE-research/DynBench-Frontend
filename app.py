@@ -673,7 +673,7 @@ if 'new_question' in st.session_state:
         # st.write(f"Potential replacements found: {replaces}")
 
 # add some vertical space
-st.write("")
+#st.write("")
 st.write("")
 
 with st.expander("API request (curl)"):

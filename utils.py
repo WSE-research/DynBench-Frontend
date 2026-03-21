@@ -7,7 +7,7 @@ import re
 
 import requests
 # import sparqlib
-import streamlit as st
+import streamlit as st  # pyright: ignore[reportMissingImports]
 
 from settings import FEEDBACK_URL, MODELS_URL
 
@@ -31,7 +31,8 @@ def get_models():
     try:
         resp = requests.get(MODELS_URL).json()
         return resp['models']
-    except:
+    except Exception as e:
+        logger.error(f"Error getting models: {e}")
         return ['openai/gpt-4o',]
 
 
@@ -57,7 +58,7 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
         return None, f"Request failed: {e}"
 
     if r.status_code != 200:
-        return None, f"HTTP {r.status_code}: {r.text.strip()}"
+        return None, f"{r.url} returned HTTP {r.status_code}: {r.text.strip()}"
 
     try:
         body = r.json()
@@ -118,7 +119,8 @@ def submit_feedback(question, query, new_question, new_query, object, value, fee
     }
     try:
         requests.post(FEEDBACK_URL, headers={}, json=feedback, timeout=30)
-    except:
+    except Exception as e:
+        logger.error(f"Error submitting feedback: {e}")
         return
 
     st.session_state["feedback_count"] = st.session_state.get("feedback_count", 0) + 1

@@ -4,8 +4,10 @@
 .st-key-output_row_new_question,
 .st-key-output_row_new_query {
     padding: 1ex !important;
-    border: 1px solid #FFF !important;
+    padding-bottom: 0ex !important;
+    border: 1px solid transparent !important;
     border-radius: 1ex !important;
+    margin-top: -2ex !important;
 }
 
 .st-key-output_row_detected_language:hover,
@@ -14,7 +16,6 @@
 .st-key-output_row_new_question:hover,
 .st-key-output_row_new_query:hover {
     background-color: #EEF !important;
-
     /* background color of the first button  */
     button[kind="secondary"]:hover {
         background-color: #F9F9D9 !important;
@@ -35,4 +36,13 @@
 .st-key-form_submit_button button:hover {
     background-color: #f9f9f9 !important;
     border: 1px solid #5a3aa8 !important;
+}
+
+#dyn-bench-question-query-pair-generator {
+    padding-top: 0ex !important;
+    margin-top: -2ex !important;
+}
+
+#generated-question-query-pair {
+    margin-top: -2ex !important;
 }
