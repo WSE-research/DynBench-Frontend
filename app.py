@@ -15,7 +15,6 @@ from streamlit.components.v1 import html
 from PIL import Image
 import base64
 
-from wse_logo_rotation import start_wse_logo_rotation, stop_wse_logo_rotation
 import healthcheck
 from sample_selector import (
     select_sample,
@@ -29,7 +28,15 @@ from utils import (
     submit_feedback,
     get_models
 )
-from settings import *
+from settings import (
+    PAGE_IMAGE,
+    PAGE_TITLE,
+    PAGE_ICON,
+    LANGUAGES,
+    LANGUAGE_CODES,
+    GITHUB_REPO,
+    DEFAULT_QUERY_INPUT_HEIGHT,
+)
 
 handler = colorlog.StreamHandler()
 handler.setFormatter(
@@ -164,29 +171,8 @@ if not st.session_state.get("_lang_filter_manual", False):
     if st.session_state.get("_last_sample_language_param") != _sample_language:
         st.session_state["_last_sample_language_param"] = _sample_language
         if _sample_language is not None:
-            st.session_state[f"lang_filter_{_sample_language}"] = True
+            st.session_state[f"lang_filter_{_sample_language}"] = True   
 
-
-# def call_dynbench(url, question, query, model, complexity="normal", language="en"):
-#     headers = {}
-#     data = {
-#         "question": question,
-#         "query": query,
-#         "model": model,
-#         "lang": language,
-#         "complexity": complexity,
-#         "checks": ["sentence"],
-#     }
-
-#     try:
-#         r = requests.post(url, headers=headers, json=data)
-#         if r and r.status_code == 200:
-#             return r.json()
-#         else:
-#             return None
-#     except:
-#         return None
-    
 
 # === Sidebar ===
 with st.sidebar:
@@ -280,21 +266,6 @@ with st.sidebar:
         st.caption("✅ Backend reachable")
     else:
         st.error("🚨 Backend unreachable!")
-        # st.error(f"Backend unreachable: {_backend_status['message']}", icon="🚨")
-
-    # # --- Original language(S) selector ---
-    # st.markdown(
-    #     '<style>div[data-testid="stCheckbox"]{margin-bottom: -10px;}</style>', 
-    #     unsafe_allow_html=True
-    # )
-    # st.markdown(
-    #     '<span style="font-size:14px; font-weight:400; margin-bottom: 4px;">Select language(s) for random record</span>',
-    #     unsafe_allow_html=True,
-    #     help="Select language(s) you'd like to see for a random sample.",
-    # )
-    # for lang in st.session_state.languages:
-    #     st.checkbox(LANG_BACK[lang], key=f'checkbox_{lang}')
-    # st.space("small")
 
 _effective_sample_language = (
     None if st.session_state.get("_lang_filter_manual", False) else _sample_language
@@ -325,25 +296,7 @@ if _sample_id is not None or _effective_sample_language is not None:
             "No sample found for sample_id=%r sample_language=%r",
             _sample_id,
             _effective_sample_language,
-        )
-# Neither param present (or manual filter active): leave random_record as-is.
-
-
-# --- Main panel ---
-# col_titel, col_random = st.columns([4, 1], vertical_alignment='bottom')
-# with col_titel:
-#     st.title("Generate new question-query pair")
-# with col_random:
-#     if st.button('Random sample'):
-#         st.session_state.pop('new_question', None)
-#         selected = {lang for lang in st.session_state.languages if st.session_state[f'checkbox_{lang}']}
-#         # st.write(selected)
-#         slice = [i for i in st.session_state.samples if i['language'] in selected]
-
-#         st.session_state.random_record = random.choice(slice)
-#         st.session_state.question_input = st.session_state.random_record["question"]
-#         st.session_state.query_input = st.session_state.random_record["query"]
-#         st.rerun()        
+        )      
 
 st.title("DynBench: Question-Query Pair Generator")
 st.subheader(
@@ -457,8 +410,6 @@ if submit:
 
     logger.info(f'Run new generation for question "{question}" and query "{query}"')
 
-    start_wse_logo_rotation()
-
     with st.spinner(
         "Generating question-query pair using " + model + "...", show_time=True
     ):
@@ -472,22 +423,6 @@ if submit:
         )
 
         print(r)
-
-    stop_wse_logo_rotation()
-
-    # if r:
-    #     st.session_state['new_question'] = r['transformed_question']
-    #     st.session_state['new_query'] = r['transformed_query']
-    #     st.session_state.result = r
-    # else:
-    #     st.session_state.pop('new_question', None)
-    #     st.session_state.pop('new_query', None)
-    #     logger.warning(
-    #         "No question-query generated for question=%r, query=%r", question, query
-    #     )
-    #     st.subheader(':red[Error]')
-    #     st.text('Sorry, an error occurred. No question-query pair was generated.')
-    #     st.text('Please try again with different settings or new question/query.')
 
     if r:
         st.session_state["new_question"] = r["transformed_question"]
@@ -628,52 +563,9 @@ if 'new_question' in st.session_state:
                 f'detected_language: {detected_language}', 
                 1
             )
-    # col1, col2, col3, _ =  st.columns([10, 1, 1, 2])
-    # with col1:
-    #     st.subheader("New question")
-    #     st.text(new_question)
-    # with col2:
-    #     if st.button(':green[✔]', key='new_question_OK', use_container_width=True):
-    #         submit_feedback(question, query, new_question, new_query, 'question', 'OK')
-    # with col3:
-    #     if st.button(':red[✗]', key='new_question_wrong', use_container_width=True):
-    #         submit_feedback(question, query, new_question, new_query, 'question', 'wrong')
-
-    # col1, col2, col3, _ =  st.columns([10, 1, 1, 2])
-    # with col1:
-    #     st.subheader("New query")
-    #     st.text(new_query)
-    # with col2:
-    #     if st.button(':green[✔]', key='new_query_OK', use_container_width=True):
-    #         submit_feedback(question, query, new_question, new_query, 'query', 'OK')
-    # with col3:
-    #     if st.button(':red[✗]', key='new_query_wrong', use_container_width=True):
-    #         submit_feedback(question, query, new_question, new_query, 'query', 'wrong')
 
     st.divider()
 
-#    with st.expander("See more details"):
-#        for attempt in st.session_state.result['extra']['attempts']:
-#            if attempt.get('Status', 'failed') == 'success':
-#                for k, v in attempt.items():
-#                    st.write(f'{k}: {v}')
-#
-#        for attempt in st.session_state.result['extra']['attempts']:
-#            if attempt.get('Status', 'failed') != 'success':
-#                with st.expander(":red[Failed attempt]"):
-#                    for k, v in attempt.items():
-#                        st.write(f'{k}: {v}')
-        # replace = st.session_state.result['extra']['selected_replace']
-        # replaces = st.session_state.result['extra']['total_candidates']
-        # st.write(f"Original language: {st.session_state.result['extra']['Original language']}")
-        # st.write(f"Original entity: {replace['old_entity']} ({replace['old_label']})")
-        # st.write(f"Replace entity: {replace['new_entity']} ({replace['new_label']})")
-        # st.write(f"Original entity PageRank: {replace['old_pagerank']}")
-        # st.write(f"Replace entity PageRank: {replace['new_pagerank']}")
-        # st.write(f"Potential replacements found: {replaces}")
-
-# add some vertical space
-#st.write("")
 st.write("")
 
 with st.expander("API request (curl)"):
@@ -712,7 +604,7 @@ if "new_question" in st.session_state:
             st.markdown(f"**{_label}**")
             if _key in ("original_query", "transformed_query"):
                 try:
-                    _display_value = sparqlib.format_string(str(_raw_value))
+                    _display_value = format_sparql(str(_raw_value))
                 except Exception:
                     _display_value = str(_raw_value)
                 st.code(_display_value, language="sparql")
