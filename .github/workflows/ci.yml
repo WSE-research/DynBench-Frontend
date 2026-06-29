@@ -1,0 +1,64 @@
+# CI for DynBench-Frontend: lint + unit tests (coverage gate) + end-to-end boot.
+# Deployment (Docker build/push) stays in deploy_service.yml.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install ruff
+      # Advisory for now (pre-existing findings); tighten once the app modules are clean.
+      - run: ruff check . || true
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      - name: Unit tests with coverage gate
+        run: |
+          pytest test_api.py test_healthcheck.py test_sample_selector.py test_utils.py \
+            --cov=api --cov=utils --cov=sample_selector --cov=healthcheck --cov=settings \
+            --cov-report=term-missing --cov-report=xml --cov-fail-under=65 \
+            --junitxml=pytest-report.xml
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+          if-no-files-found: ignore
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      - name: End-to-end app boot test
+        run: pytest tests/e2e -m e2e -v
