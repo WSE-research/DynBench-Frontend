@@ -54,6 +54,22 @@ The file format is detected automatically (see `benchmark_formats.py`). Supporte
 * Single SPARQL files (`.rq`/`.sparql`) with the question in leading `#` comments (Bio-SODA benchmark style)
 * SIB sparql-examples Turtle files (`rdfs:comment` + `sh:select`)
 
+=== Programmatic access (REST API)
+
+The same batch processing is available to programs via `POST /api/transform-benchmark` (interactive Swagger documentation at `GET /api/transform-benchmark`, machine-readable spec at `/api/openapi.json`). Upload the benchmark file as multipart/form-data (field `file`) or as the raw request body with a `filename` parameter for format detection:
+
+```bash
+# per-pair JSON report for the first 10 pairs
+curl -X POST 'https://<host>/api/transform-benchmark?model=gpt-4o&limit=10' \
+  -F 'file=@qald-9-test.json'
+
+# transformed benchmark in the exact format of the upload, all pairs
+curl -X POST 'https://<host>/api/transform-benchmark?model=gpt-4o&limit=0&response=file' \
+  -F 'file=@qald-9-test.json' -o qald-9-test-transformed.json
+```
+
+Parameters: `model` (required, see `GET /api/models`), `complexity` (`easy|normal|hard|random`, default `normal`), `language` (ISO 639-1, default `en`), `limit` (pairs from the beginning of the file, default `10`, `0` = all), `response` (`json` = per-pair report incl. entity replacements and per-pair errors, `file` = the transformed benchmark in the upload's format). Note that every pair is one LLM round-trip, so large `limit` values lead to long-running requests.
+
 == Prerequisites
 
 * Python 3.10+

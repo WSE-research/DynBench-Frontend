@@ -3,18 +3,29 @@ api.py — exposes call_dynbench as a REST endpoint on Streamlit's Tornado serve
 
 Endpoints
 ---------
-POST /api/transform      — transform a question-query pair (JSON API)
-GET  /api/transform      — interactive Swagger UI documentation
-GET  /api/openapi.json   — machine-readable OpenAPI 3.0 specification
+POST /api/transform            — transform a question-query pair (JSON API)
+POST /api/transform-benchmark  — transform a complete benchmark file (batch API)
+GET  /api/transform            — interactive Swagger UI documentation
+GET  /api/openapi.json         — machine-readable OpenAPI 3.0 specification
 
-Request body for POST (JSON)
------------------------------
+Request body for POST /api/transform (JSON)
+-------------------------------------------
 {
     "question":   "<natural-language question>",   # required
     "query":      "<SPARQL query>",                # required
     "complexity": "easy|normal|hard|random",       # optional, default "normal"
     "language":   "<ISO 639-1 code>",              # optional, default "en"
 }
+
+POST /api/transform-benchmark
+-----------------------------
+Upload a benchmark file either as multipart/form-data (field ``file``) or as
+the raw request body (then pass ``?filename=…`` for format detection). The
+format is auto-detected (same registry as the web UI, see benchmark_formats).
+Parameters (query or form fields): ``model`` (required), ``complexity``,
+``language``, ``limit`` (number of pairs from the start of the file,
+default 10, 0 = all), ``response`` (``json`` = per-pair report, ``file`` =
+the transformed benchmark in the exact format of the upload).
 
 The model and DynBench backend URL are taken from the server-side environment
 variables MODEL and DYNBENCH, identical to server.py.
@@ -37,13 +48,16 @@ The patch chains on top of any previously registered patch (e.g. healthcheck).
 import asyncio
 import json
 import logging
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 from decouple import config
+import tornado.web
 from tornado.routing import PathMatches, Rule
 from tornado.web import RequestHandler
 
 import streamlit.web.server.server as _st_server
+from benchmark_formats import FORMATS, BatchResult, parse_benchmark
 from utils import call_dynbench
 
 logger = logging.getLogger(__name__)
@@ -65,17 +79,190 @@ _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="api-transform"
 # OpenAPI 3.0 specification
 # ---------------------------------------------------------------------------
 
+_SUPPORTED_FORMAT_NAMES = ", ".join(f.name for f in FORMATS)
+
 _OPENAPI_SPEC: dict = {
     "openapi": "3.0.0",
     "info": {
         "title": "DynBench Transform API",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "description": (
             "Generate new question-query pairs that are semantically compatible "
             "with a reference pair and have a configurable entity difficulty."
         ),
     },
     "paths": {
+        "/api/transform-benchmark": {
+            "post": {
+                "summary": "Transform a complete benchmark file (batch)",
+                "description": (
+                    "Uploads a benchmark file, auto-detects its format and runs the "
+                    "contained question-query pairs iteratively through the DynBench "
+                    "backend — the programmatic equivalent of the web UI's benchmark "
+                    "file upload mode. Upload either as multipart/form-data (field "
+                    "``file``) or as the raw request body together with a "
+                    "``filename`` parameter for format detection. "
+                    f"Supported formats: {_SUPPORTED_FORMAT_NAMES}. "
+                    "Note: every pair is one LLM round-trip, so large ``limit`` "
+                    "values lead to long-running requests."
+                ),
+                "parameters": [
+                    {
+                        "name": "model",
+                        "in": "query",
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "description": (
+                            "LLM model identifier to use for generation. "
+                            "See GET /api/models for available values. "
+                            "May alternatively be sent as a form field."
+                        ),
+                        "example": "gpt-4o",
+                    },
+                    {
+                        "name": "complexity",
+                        "in": "query",
+                        "required": False,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["easy", "normal", "hard", "random"],
+                            "default": "normal",
+                        },
+                        "description": "Difficulty of the entities in the generated pairs.",
+                    },
+                    {
+                        "name": "language",
+                        "in": "query",
+                        "required": False,
+                        "schema": {"type": "string", "default": "en"},
+                        "description": "ISO 639-1 target language code for the generated questions.",
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": False,
+                        "schema": {"type": "integer", "default": 10, "minimum": 0},
+                        "description": (
+                            "Number of pairs to process, counted from the beginning "
+                            "of the file. 0 processes ALL pairs."
+                        ),
+                    },
+                    {
+                        "name": "response",
+                        "in": "query",
+                        "required": False,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["json", "file"],
+                            "default": "json",
+                        },
+                        "description": (
+                            "'json' returns a per-pair JSON report; 'file' returns "
+                            "the transformed benchmark in the exact same format as "
+                            "the uploaded file."
+                        ),
+                    },
+                    {
+                        "name": "filename",
+                        "in": "query",
+                        "required": False,
+                        "schema": {"type": "string"},
+                        "description": (
+                            "Original file name (used for format detection). Only "
+                            "needed when the file is sent as the raw request body "
+                            "instead of multipart/form-data."
+                        ),
+                        "example": "qald-9-test.json",
+                    },
+                ],
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["file"],
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "description": "The benchmark file.",
+                                    },
+                                },
+                            }
+                        },
+                        "application/octet-stream": {
+                            "schema": {
+                                "type": "string",
+                                "format": "binary",
+                                "description": (
+                                    "Raw benchmark file content (pass ?filename=… "
+                                    "for format detection)."
+                                ),
+                            }
+                        },
+                    },
+                },
+                "responses": {
+                    "200": {
+                        "description": (
+                            "Batch processed. JSON report (response=json) or the "
+                            "transformed benchmark file (response=file)."
+                        ),
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "format": {
+                                            "type": "string",
+                                            "description": "Detected benchmark format.",
+                                        },
+                                        "total_pairs": {
+                                            "type": "integer",
+                                            "description": "Pairs found in the file.",
+                                        },
+                                        "processed": {"type": "integer"},
+                                        "succeeded": {"type": "integer"},
+                                        "failed": {"type": "integer"},
+                                        "results": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {"type": "string"},
+                                                    "language": {"type": "string"},
+                                                    "question": {"type": "string"},
+                                                    "query": {"type": "string"},
+                                                    "transformed_question": {"type": "string"},
+                                                    "transformed_query": {"type": "string"},
+                                                    "selected_replace": {"type": "object"},
+                                                    "error": {"type": "string"},
+                                                },
+                                            },
+                                        },
+                                    },
+                                }
+                            }
+                        },
+                    },
+                    "400": {
+                        "description": (
+                            "Missing file/model, unsupported or unrecognized "
+                            "benchmark format, or invalid parameters."
+                        ),
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {"error": {"type": "string"}},
+                                }
+                            }
+                        },
+                    },
+                },
+            }
+        },
         "/api/transform": {
             "post": {
                 "summary": "Transform a question-query pair",
@@ -358,6 +545,166 @@ class TransformHandler(RequestHandler):
             self.write(json.dumps({"error": error}))
 
 
+_EXPORT_CONTENT_TYPES = {
+    ".json": "application/json",
+    ".xml": "application/xml",
+    ".csv": "text/csv",
+    ".tsv": "text/tab-separated-values",
+    ".rq": "application/sparql-query",
+    ".sparql": "application/sparql-query",
+    ".ttl": "text/turtle",
+    ".turtle": "text/turtle",
+}
+
+
+def _process_benchmark_records(records, model, complexity, language):
+    """Sequentially transform *records* (runs inside the executor thread)."""
+    results = []
+    for i, record in enumerate(records):
+        logger.info(
+            "API batch: pair %d/%d (id %r)", i + 1, len(records), record.id
+        )
+        response, error = call_dynbench(
+            _DYNBENCH_URL, record.question, record.query, model, complexity, language
+        )
+        if response:
+            results.append(
+                BatchResult(
+                    record=record,
+                    new_question=response.get("transformed_question"),
+                    new_query=response.get("transformed_query"),
+                    response=response,
+                )
+            )
+        else:
+            results.append(BatchResult(record=record, error=error))
+    return results
+
+
+class TransformBenchmarkHandler(RequestHandler):
+    """POST /api/transform-benchmark — batch-transform an uploaded benchmark file.
+
+    GET serves the Swagger UI (the spec documents all endpoints).
+    """
+
+    def check_xsrf_cookie(self) -> None:  # REST endpoint — no XSRF token expected
+        pass
+
+    async def get(self) -> None:
+        self.set_header("Content-Type", "text/html; charset=utf-8")
+        self.write(_SWAGGER_UI_HTML)
+
+    def _fail(self, status: int, message: str) -> None:
+        self.set_status(status)
+        self.set_header("Content-Type", "application/json")
+        self.write(json.dumps({"error": message}))
+
+    def _uploaded_file(self):
+        """Return (filename, content) from multipart or the raw request body."""
+        files = self.request.files.get("file")
+        if files:
+            upload = files[0]
+            return upload.filename or "benchmark.json", upload.body
+        if self.request.body:
+            filename = self.get_argument("filename", "")
+            if not filename:
+                return None, (
+                    "When the file is sent as the raw request body, the "
+                    "'filename' parameter is required for format detection "
+                    "(alternatively upload as multipart/form-data field 'file')."
+                )
+            return filename, self.request.body
+        return None, (
+            "No benchmark file supplied. Upload it as multipart/form-data "
+            "field 'file' or as the raw request body with ?filename=…"
+        )
+
+    async def post(self) -> None:
+        filename, content = self._uploaded_file()
+        if filename is None:
+            self._fail(400, content)
+            return
+
+        model = self.get_argument("model", "").strip()
+        if not model:
+            self._fail(400, "Missing required parameter: model")
+            return
+        complexity = self.get_argument("complexity", "normal")
+        language = self.get_argument("language", "en")
+        response_mode = self.get_argument("response", "json")
+        if response_mode not in ("json", "file"):
+            self._fail(400, "Parameter 'response' must be 'json' or 'file'.")
+            return
+        try:
+            limit = int(self.get_argument("limit", "10"))
+            if limit < 0:
+                raise ValueError
+        except ValueError:
+            self._fail(400, "Parameter 'limit' must be a non-negative integer (0 = all pairs).")
+            return
+
+        try:
+            fmt, records = parse_benchmark(filename, content)
+        except ValueError as exc:
+            self._fail(400, str(exc))
+            return
+
+        todo = records if limit == 0 else records[:limit]
+        logger.info(
+            "API /api/transform-benchmark: file=%r format=%r pairs=%d "
+            "processing=%d model=%r complexity=%r language=%r response=%r",
+            filename, fmt.name, len(records), len(todo), model, complexity,
+            language, response_mode,
+        )
+
+        loop = asyncio.get_event_loop()
+        results = await loop.run_in_executor(
+            _executor,
+            lambda: _process_benchmark_records(todo, model, complexity, language),
+        )
+
+        if response_mode == "file":
+            stem, ext = os.path.splitext(filename)
+            self.set_header(
+                "Content-Type",
+                _EXPORT_CONTENT_TYPES.get(ext.lower(), "text/plain") + "; charset=utf-8",
+            )
+            self.set_header(
+                "Content-Disposition",
+                f'attachment; filename="{stem}-transformed{ext or ".json"}"',
+            )
+            self.write(fmt.export(results))
+            return
+
+        report = {
+            "format": fmt.name,
+            "total_pairs": len(records),
+            "processed": len(results),
+            "succeeded": sum(1 for r in results if r.error is None),
+            "failed": sum(1 for r in results if r.error is not None),
+            "results": [
+                {
+                    "id": r.record.id,
+                    "language": r.record.language,
+                    "question": r.record.question,
+                    "query": r.record.query,
+                    **(
+                        {
+                            "transformed_question": r.new_question,
+                            "transformed_query": r.new_query,
+                            "selected_replace": (r.response or {}).get("selected_replace"),
+                        }
+                        if r.error is None
+                        else {"error": r.error}
+                    ),
+                }
+                for r in results
+            ],
+        }
+        self.set_header("Content-Type", "application/json")
+        self.write(json.dumps(report, ensure_ascii=False))
+
+
 # ---------------------------------------------------------------------------
 # Patch start_listening to register routes
 # ---------------------------------------------------------------------------
@@ -367,12 +714,16 @@ class TransformHandler(RequestHandler):
 _prev_start_listening = _st_server.start_listening
 
 
-def _patched_start_listening(app: "tornado.web.Application") -> None:  # type: ignore[name-defined]
+def _patched_start_listening(app: tornado.web.Application) -> None:
     app.wildcard_router.rules.insert(0, Rule(PathMatches(r"/api/openapi\.json"), OpenApiSpecHandler))
     app.wildcard_router.rules.insert(0, Rule(PathMatches(r"/api/models"), ModelsHandler))
+    app.wildcard_router.rules.insert(0, Rule(PathMatches(r"/api/transform-benchmark"), TransformBenchmarkHandler))
     app.wildcard_router.rules.insert(0, Rule(PathMatches(r"/api/transform"), TransformHandler))
     app.wildcard_router.rules.insert(0, Rule(PathMatches(r"/api"), ApiRootHandler))
-    logger.info("Registered /api, /api/transform, /api/models, /api/openapi.json on Streamlit's Tornado server")
+    logger.info(
+        "Registered /api, /api/transform, /api/transform-benchmark, /api/models, "
+        "/api/openapi.json on Streamlit's Tornado server"
+    )
     _prev_start_listening(app)
 
 

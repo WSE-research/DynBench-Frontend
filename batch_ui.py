@@ -196,6 +196,30 @@ def _export_filename(upload_name: str) -> str:
     return f"{stem}-transformed{ext or '.json'}"
 
 
+def _render_api_example(model: str, difficulty: str, language: str, limit: int,
+                        upload_name: str):
+    """Show the curl equivalent of the current batch run (programmatic API)."""
+    with st.expander("API request (curl)"):
+        host = st.context.headers.get("Host", "localhost:8501")
+        proto = st.context.headers.get("X-Forwarded-Proto", "http")
+        api_url = (
+            f"{proto}://{host}/api/transform-benchmark"
+            f"?model={model}&complexity={difficulty}&language={language}&limit={limit}"
+        )
+        st.code(
+            f"curl -X POST '{api_url}' \\\n"
+            f"  -F 'file=@{upload_name}'",
+            language="bash",
+        )
+        st.caption(
+            "Returns a per-pair JSON report; append `&response=file` to receive "
+            "the transformed benchmark in the exact format of the uploaded file. "
+            "`limit=0` processes all pairs. Interactive documentation: "
+            f"[{proto}://{host}/api/transform-benchmark]"
+            f"({proto}://{host}/api/transform-benchmark)"
+        )
+
+
 def render_batch_mode(transform_url: str, model: str, difficulty: str, language: str):
     """Render the benchmark file-upload mode (called from app.py)."""
     st.markdown(_TOOLTIP_CSS, unsafe_allow_html=True)
@@ -282,6 +306,8 @@ def render_batch_mode(transform_url: str, model: str, difficulty: str, language:
         st.session_state["batch_run_key"] = run_key
         st.session_state["batch_format"] = fmt
         st.session_state["batch_upload_name"] = uploaded.name
+
+    _render_api_example(model, difficulty, language, int(limit), uploaded.name)
 
     results = st.session_state.get("batch_results")
     if not results:
