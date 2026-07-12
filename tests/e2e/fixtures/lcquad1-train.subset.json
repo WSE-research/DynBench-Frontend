@@ -1,0 +1,16 @@
+[
+  {
+    "_id": "1501",
+    "corrected_question": "How many movies did Stanley Kubrick direct?",
+    "intermediary_question": "How many <movies> are there whose <director> is <Stanley Kubrick>?",
+    "sparql_query": "SELECT DISTINCT COUNT(?uri) WHERE {?uri <http://dbpedia.org/ontology/director> <http://dbpedia.org/resource/Stanley_Kubrick>  . }",
+    "sparql_template_id": 101
+  },
+  {
+    "_id": "2586",
+    "corrected_question": "Which city's foundeer is John Forbes?",
+    "intermediary_question": "What <city>'s <founded by> is <John Forbes (British Army officer)>",
+    "sparql_query": "SELECT DISTINCT ?uri WHERE {?uri <http://dbpedia.org/ontology/founder> <http://dbpedia.org/resource/John_Forbes_(British_Army_officer)>  . ?uri <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://dbpedia.org/ontology/City>}",
+    "sparql_template_id": 301
+  }
+]

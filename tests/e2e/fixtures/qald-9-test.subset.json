@@ -1,0 +1,232 @@
+{
+  "dataset": {
+    "id": "qald-9-test-multilingual"
+  },
+  "questions": [
+    {
+      "id": "99",
+      "answertype": "resource",
+      "aggregation": false,
+      "onlydbo": true,
+      "hybrid": false,
+      "question": [
+        {
+          "language": "de",
+          "string": "In welcher Zeitzone liegt Salt Lake City?",
+          "keywords": "Salt Lake City,  Zeitzone"
+        },
+        {
+          "language": "ru",
+          "string": "Какие является  время зона из Поваренная соль Озеро Город? ",
+          "keywords": "Поваренная соль Озеро город ,   время зона "
+        },
+        {
+          "language": "pt",
+          "string": "Qual é o fuso horário da Salt Lake City?",
+          "keywords": "Cidade de Salt Lake, fuso horário"
+        },
+        {
+          "language": "en",
+          "string": "What is the time zone of Salt Lake City?",
+          "keywords": "Salt Lake City,  time zone"
+        },
+        {
+          "language": "hi_IN",
+          "string": "साल्ट लेक सिटी का समय क्षेत्र क्या है?",
+          "keywords": "साल्ट लेक सिटी,  समय क्षेत्र"
+        },
+        {
+          "language": "fa",
+          "string": "منطقه زمانی سالت لیک سیتی چیست؟",
+          "keywords": "سالت‌لیک‌سیتی,  منطقه زمانی"
+        },
+        {
+          "language": "pt_BR",
+          "string": "Qual o fuso horário da cidade de Salt Lake?",
+          "keywords": "fuso horário, cidade de Salt Lake"
+        },
+        {
+          "language": "it",
+          "string": "In quale fuso orario si trova Salt Lake City?",
+          "keywords": "Salt Lake City,  fuso orario"
+        },
+        {
+          "language": "fr",
+          "string": "Quel est le fuseau horaire de Salt Lake City?",
+          "keywords": "fuseau horaire,  Salt Lake City"
+        },
+        {
+          "language": "ro",
+          "string": "Ce este  timp zona de Sare Lac Oraș? ",
+          "keywords": "Sare Lac Oraș ,   timp zona "
+        },
+        {
+          "language": "es",
+          "string": "¿En qué zona horaria se encuentra Salt Lake City?",
+          "keywords": "Salt Lake City,  zona horaria"
+        },
+        {
+          "language": "nl",
+          "string": "In welke tijdzone ligt Salt Lake City?",
+          "keywords": "Salt Lake City,  tijdzone"
+        }
+      ],
+      "query": {
+        "sparql": "PREFIX res: <http://dbpedia.org/resource/> PREFIX dbp: <http://dbpedia.org/property/> SELECT DISTINCT ?uri WHERE { res:Salt_Lake_City <http://dbpedia.org/ontology/timeZone> ?uri }"
+      },
+      "answers": [
+        {
+          "head": {
+            "vars": [
+              "uri"
+            ]
+          },
+          "results": {
+            "bindings": [
+              {
+                "uri": {
+                  "type": "uri",
+                  "value": "http://dbpedia.org/resource/Mountain_Time_Zone"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "98",
+      "answertype": "resource",
+      "aggregation": false,
+      "onlydbo": false,
+      "hybrid": false,
+      "question": [
+        {
+          "language": "de",
+          "string": "Wer hat Caesar getötet?",
+          "keywords": "wer ,  Caesar,  getötet"
+        },
+        {
+          "language": "ru",
+          "string": "Кто убитый Цезарь? ",
+          "keywords": "убитый ,   Цезарь "
+        },
+        {
+          "language": "pt",
+          "string": "Quem matou Caesar?",
+          "keywords": "assassinado ,   César "
+        },
+        {
+          "language": "hi_IN",
+          "string": "कौन मारे गए सीज़र? ",
+          "keywords": "मारे गए ,   सीज़र "
+        },
+        {
+          "language": "en",
+          "string": "Who killed Caesar?",
+          "keywords": "who ,  killed,  Caesar"
+        },
+        {
+          "language": "fa",
+          "string": "چه کسی سزار را کشت؟",
+          "keywords": "  کشته شده,     سزار"
+        },
+        {
+          "language": "it",
+          "string": "Chi uccise Giulio Cesare?",
+          "keywords": "uccise,  Giulio Cesare"
+        },
+        {
+          "language": "fr",
+          "string": "Qui a tué César?",
+          "keywords": "tué,  César"
+        },
+        {
+          "language": "ro",
+          "string": "Cine la ucis pe Cezar?",
+          "keywords": "ucis ,   Cezar "
+        },
+        {
+          "language": "es",
+          "string": "¿Quién mató a César?",
+          "keywords": "delicado ,   César "
+        },
+        {
+          "language": "nl",
+          "string": "Wie heeft Caesar vermoord?",
+          "keywords": "gedood ,   Caesar "
+        }
+      ],
+      "query": {
+        "sparql": "PREFIX dct: <http://purl.org/dc/terms/> PREFIX dbc: <http://dbpedia.org/resource/Category:> SELECT DISTINCT ?uri WHERE { ?uri dct:subject dbc:Assassins_of_Julius_Caesar }"
+      },
+      "answers": [
+        {
+          "head": {
+            "vars": [
+              "uri"
+            ]
+          },
+          "results": {
+            "bindings": [
+              {
+                "uri": {
+                  "type": "uri",
+                  "value": "http://dbpedia.org/resource/Marcus_Junius_Brutus_the_Younger"
+                }
+              },
+              {
+                "uri": {
+                  "type": "uri",
+                  "value": "http://dbpedia.org/resource/Gaius_Cassius_Parmensis"
+                }
+              },
+              {
+                "uri": {
+                  "type": "uri",
+                  "value": "http://dbpedia.org/resource/Lucius_Minucius_Basilus"
+                }
+              },
+              {
+                "uri": {
+                  "type": "uri",
+                  "value": "http://dbpedia.org/resource/Gaius_Cassius_Longinus"
+                }
+              },
+              {
+                "uri": {
+                  "type": "uri",
+                  "value": "http://dbpedia.org/resource/Decimus_Junius_Brutus_Albinus"
+                }
+              },
+              {
+                "uri": {
+                  "type": "uri",
+                  "value": "http://dbpedia.org/resource/Servilius_Casca"
+                }
+              },
+              {
+                "uri": {
+                  "type": "uri",
+                  "value": "http://dbpedia.org/resource/Tillius_Cimber"
+                }
+              },
+              {
+                "uri": {
+                  "type": "uri",
+                  "value": "http://dbpedia.org/resource/Lucius_Cornelius_Cinna_(suffect_consul)"
+                }
+              },
+              {
+                "uri": {
+                  "type": "uri",
+                  "value": "http://dbpedia.org/resource/Quintus_Antistius_Labeo"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

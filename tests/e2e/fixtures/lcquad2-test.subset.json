@@ -1,0 +1,28 @@
+[
+  {
+    "NNQT_question": "What is the {country} for {head of state} of {Mahmoud Abbas}",
+    "uid": 20258,
+    "subgraph": "simple question left",
+    "template_index": 604,
+    "question": "Who is the  {country} for {head of state} of {Mahmoud Abbas}",
+    "sparql_wikidata": " select distinct ?sbj where { ?sbj wdt:P35 wd:Q127998 . ?sbj wdt:P31 wd:Q6256 } ",
+    "sparql_dbpedia18": "select distinct ?subj where { ?statement <http://www.w3.org/1999/02/22-rdf-syntax-ns#subject> ?subj . ?statement <http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate> <http://www.wikidata.org/entity/P35> . ?statement <http://www.w3.org/1999/02/22-rdf-syntax-ns#object> <http://wikidata.dbpedia.org/resource/Q127998> . ?subj <http://www.wikidata.org/entity/P31> <http://wikidata.dbpedia.org/resource/Q6256> } ",
+    "template": "<?S P O ; ?S InstanceOf Type>",
+    "answer": [],
+    "template_id": 2,
+    "paraphrased_question": "What country is Mahmoud Abbas the head of state of?"
+  },
+  {
+    "NNQT_question": "What is {population} of {Somalia} that is {point in time} is {2009-0-0} ?",
+    "uid": 7141,
+    "subgraph": "statement_property",
+    "template_index": 3586,
+    "question": "What was the population of Somalia in 2009-0-0?",
+    "sparql_wikidata": "SELECT ?obj WHERE { wd:Q1045 p:P1082 ?s . ?s ps:P1082 ?obj . ?s pq:P585 ?x filter(contains(YEAR(?x),'2009')) }",
+    "sparql_dbpedia18": "select distinct ?obj  where {\n?statement <http://www.w3.org/1999/02/22-rdf-syntax-ns#subject> <http://wikidata.dbpedia.org/resource/Q1045> .\n?statement <http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate> <http://www.wikidata.org/entity/P1082> .\n?statement <http://www.w3.org/1999/02/22-rdf-syntax-ns#object> ?obj .\n?statement <http://www.wikidata.org/entity/P585> <2009-0-0>\n} \n",
+    "template": "(E pred F) prop ?value",
+    "answer": [],
+    "template_id": "statement_property_2",
+    "paraphrased_question": "As of 2009, how many people lived in Somalia?"
+  }
+]

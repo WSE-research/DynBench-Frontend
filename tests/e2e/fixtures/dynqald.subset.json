@@ -1,0 +1,22 @@
+[
+  {
+    "id": "train:1",
+    "language": "en",
+    "old pagerank": 130,
+    "new pagerank": 106,
+    "question": "List all boardgames by GMT.",
+    "new question": "List all card games by GMT.",
+    "query": "SELECT ?uri WHERE { ?uri wdt:P31 wd:Q131436 . }",
+    "new query": "SELECT ?uri WHERE { ?uri wdt:P31 wd:Q142714 . }"
+  },
+  {
+    "id": "train:1",
+    "language": "de",
+    "old pagerank": 130,
+    "new pagerank": 106,
+    "question": "Zeige mir alle Brettspiele von GMT.",
+    "new question": "Zeige mir alle Kartenspiele von GMT.",
+    "query": "SELECT ?uri WHERE { ?uri wdt:P31 wd:Q131436 . }",
+    "new query": "SELECT ?uri WHERE { ?uri wdt:P31 wd:Q142714 . }"
+  }
+]

@@ -1,0 +1,260 @@
+{
+  "dataset": {
+    "id": "bestiary"
+  },
+  "questions": [
+    {
+      "id": 0,
+      "question": [
+        {
+          "language": "en",
+          "string": "which creatures not speaking draconic language do have chaotic good alignment?"
+        }
+      ],
+      "answers": [
+        {
+          "head": {
+            "vars": [
+              "result"
+            ]
+          },
+          "results": {
+            "bindings": [
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Anhana"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Ataxian"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Azruverda"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#BattleImp"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Biofreezer"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#BlackButterfly"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Cayhound"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Caypup"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Celedeen"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Cynosoma"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Djinni"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Domovoi"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Dryad"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#ElysianTitan"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Faun"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#FungalNymph"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Gancanagh"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Garuda"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Hamadryad"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#HeraldofDreams"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Munavri"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Muse"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Nisid"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#NobleDjinniVizier"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Nymph"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#RiftFlumph"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#RimefireEidolon"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#SapphireOoze"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#SkirmishersTroop"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#StarMonarch"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#SwanMaiden"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Taniwha"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#Unicorn"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#WoodGiant"
+                }
+              },
+              {
+                "result": {
+                  "type": "uri",
+                  "value": "http://www.semanticweb.org/annab/ontologies/2022/3/ontology#caypup"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "query": {
+        "sparql": "SELECT ?creatures WHERE {  ?creatures <http://www.semanticweb.org/annab/ontologies/2022/3/ontology#hasAlignment> <http://www.semanticweb.org/annab/ontologies/2022/3/ontology#chaoticGood> MINUS{?creatures <http://www.semanticweb.org/annab/ontologies/2022/3/ontology#hasLanguages> <http://www.semanticweb.org/annab/ontologies/2022/3/ontology#DraconicL>} }"
+      }
+    },
+    {
+      "id": 1,
+      "question": [
+        {
+          "language": "en",
+          "string": "does Caypup have more special abilities than Aasimar?"
+        }
+      ],
+      "answers": [
+        {
+          "head": {},
+          "boolean": false
+        }
+      ],
+      "query": {
+        "sparql": "SELECT (if(COUNT(?cay_SpecAbils)>COUNT(?aas_SpecAbils), 'True', 'False') as ?res) WHERE {  <http://www.semanticweb.org/annab/ontologies/2022/3/ontology#caypup> <http://www.semanticweb.org/annab/ontologies/2022/3/ontology#hasSpecAbils> ?cay_SpecAbils. <http://www.semanticweb.org/annab/ontologies/2022/3/ontology#aasimar> <http://www.semanticweb.org/annab/ontologies/2022/3/ontology#hasSpecAbils> ?aas_SpecAbils }"
+      }
+    }
+  ]
+}
