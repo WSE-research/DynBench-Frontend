@@ -34,9 +34,13 @@ toc::[]
 * Feedback collection for computed transformation steps
 * Benchmark file upload mode: process a complete benchmark file pair by pair and export the transformed benchmark in the exact format of the uploaded file
 
+== Usage modes
+
+The usage mode is selected in the sidebar box "Usage mode" (below the logo) and offers three options: *✍️ one question+query* (transform a single pair), *📤 file upload* (process a complete benchmark file), and *🔌 RESTful API* (pointers to the OpenAPI description of the programmatic API for both usage modes). On the very first visit a centered selector is shown instead; the chosen mode is stored in a cookie so the preferred mode is activated by default on later visits. The page title carries a tag-like label showing the active mode.
+
 == Benchmark file upload mode
 
-Switch the input mode from "Single question-query pair" to "Benchmark file upload" to process a complete benchmark file. Every question-query pair is sent iteratively to the DynBench backend with the settings from the sidebar (model, entity difficulty, target language). For each pair a result block shows the given question and SPARQL query next to the computed pair; recognized named entities in the questions are highlighted and a mouse-over overlay shows the human-readable label and the knowledge-graph resource URL. Each computed pair can be rated (👍/👎), which is submitted to the regular feedback endpoint.
+In the usage mode "file upload" a complete benchmark file is processed. Every question-query pair is sent iteratively to the DynBench backend with the settings from the sidebar (model, entity difficulty, target language). For each pair a result block shows the given question and SPARQL query next to the computed pair; recognized named entities in the questions are highlighted and a mouse-over overlay shows the human-readable label and the knowledge-graph resource URL. Each computed pair can be rated (👍/👎), which is submitted to the regular feedback endpoint.
 
 The number of processed pairs is user-configurable (default: 10, counted from the beginning of the file) because every pair is one LLM round-trip. The computed pairs can be downloaded as a new benchmark file in the *exact same format* as the uploaded file.
 

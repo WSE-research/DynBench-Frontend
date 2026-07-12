@@ -224,10 +224,30 @@ def render_batch_mode(transform_url: str, model: str, difficulty: str, language:
     """Render the benchmark file-upload mode (called from app.py)."""
     st.markdown(_TOOLTIP_CSS, unsafe_allow_html=True)
 
-    st.write(
-        "Upload a complete benchmark file. Every question-query pair is "
-        "processed iteratively with the settings from the sidebar, and each "
-        "computed pair is shown next to its original for review and feedback."
+    st.markdown(
+        """
+**What is this mode for?** LLM-based question-answering systems are usually
+evaluated on well-known public benchmarks (QALD, LC-QuAD, RuBQ, …). Because
+these benchmarks are part of the public web, their question-query pairs leak
+into LLM training data — systems can *memorize* answers instead of actually
+solving the task, and benchmark scores become too optimistic. DynBench
+counters this by transforming every pair into a **new, semantically
+compatible pair** over the same knowledge graph: the recognized entity is
+replaced by a compatible one whose difficulty (Wikidata PageRank) you control
+in the sidebar, and the question and SPARQL query are rewritten accordingly.
+
+**What happens here:** upload a **complete benchmark file** (all common
+benchmark formats are detected automatically — see the list below) and the
+pairs are processed **iteratively, pair by pair**, with the model, entity
+difficulty and target language configured in the sidebar. Each computed pair
+is shown next to its original — recognized entities are highlighted, and
+hovering over them shows the human-readable label with a link to the
+knowledge-graph resource — so you can review the transformation and give
+feedback. Finally, you can **download the transformed benchmark in the exact
+format of the uploaded file**: a "refreshed", memorization-resistant variant
+of your benchmark that drops into your existing evaluation pipeline without
+any format changes.
+"""
     )
 
     with st.expander("Supported benchmark file formats", expanded=False):
