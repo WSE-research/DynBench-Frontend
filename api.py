@@ -49,6 +49,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor
 
 from decouple import config
@@ -57,7 +58,7 @@ from tornado.routing import PathMatches, Rule
 from tornado.web import RequestHandler
 
 import streamlit.web.server.server as _st_server
-from benchmark_formats import FORMATS, BatchResult, parse_benchmark
+from benchmark_formats import FORMATS, BatchResult, try_parse_benchmark
 from utils import call_dynbench
 
 logger = logging.getLogger(__name__)
@@ -502,12 +503,15 @@ class TransformHandler(RequestHandler):
 
     async def post(self) -> None:
         # --- Parse request body ---
+        # NOTE: error responses use dict writes — Tornado JSON-encodes and sets
+        # the application/json content type itself — and never include
+        # exception-derived text (py/reflective-xss, py/stack-trace-exposure).
         try:
             body = json.loads(self.request.body)
         except (json.JSONDecodeError, ValueError) as exc:
+            logger.info("API /api/transform: request body is not valid JSON: %s", exc)
             self.set_status(400)
-            self.set_header("Content-Type", "application/json")
-            self.write(json.dumps({"error": f"Invalid JSON: {exc}"}))
+            self.write({"error": "Invalid JSON in the request body."})
             return
 
         question = body.get("question", "").strip()
@@ -517,8 +521,7 @@ class TransformHandler(RequestHandler):
         missing = [f for f, v in [("question", question), ("query", query), ("model", model)] if not v]
         if missing:
             self.set_status(400)
-            self.set_header("Content-Type", "application/json")
-            self.write(json.dumps({"error": f"Missing required field(s): {', '.join(missing)}"}))
+            self.write({"error": f"Missing required field(s): {', '.join(missing)}"})
             return
 
         complexity = body.get("complexity", "normal")
@@ -536,13 +539,12 @@ class TransformHandler(RequestHandler):
             lambda: call_dynbench(_DYNBENCH_URL, question, query, model, complexity, language),
         )
 
-        self.set_header("Content-Type", "application/json")
         if result is not None:
             self.set_status(200)
-            self.write(json.dumps(result))
+            self.write(result)
         else:
             self.set_status(500)
-            self.write(json.dumps({"error": error}))
+            self.write({"error": error})
 
 
 _EXPORT_CONTENT_TYPES = {
@@ -596,33 +598,37 @@ class TransformBenchmarkHandler(RequestHandler):
 
     def _fail(self, status: int, message: str) -> None:
         self.set_status(status)
-        self.set_header("Content-Type", "application/json")
-        self.write(json.dumps({"error": message}))
+        # dict write: Tornado JSON-encodes and sets the application/json
+        # content type itself (safe against response-splitting/XSS)
+        self.write({"error": message})
 
     def _uploaded_file(self):
-        """Return (filename, content) from multipart or the raw request body."""
+        """Return (filename, content, error) from multipart or the raw body.
+
+        Exactly one of content/error is set; error is always a static message.
+        """
         files = self.request.files.get("file")
         if files:
             upload = files[0]
-            return upload.filename or "benchmark.json", upload.body
+            return upload.filename or "benchmark.json", upload.body, None
         if self.request.body:
             filename = self.get_argument("filename", "")
             if not filename:
-                return None, (
+                return None, None, (
                     "When the file is sent as the raw request body, the "
                     "'filename' parameter is required for format detection "
                     "(alternatively upload as multipart/form-data field 'file')."
                 )
-            return filename, self.request.body
-        return None, (
+            return filename, self.request.body, None
+        return None, None, (
             "No benchmark file supplied. Upload it as multipart/form-data "
             "field 'file' or as the raw request body with ?filename=…"
         )
 
     async def post(self) -> None:
-        filename, content = self._uploaded_file()
-        if filename is None:
-            self._fail(400, content)
+        filename, content, upload_error = self._uploaded_file()
+        if upload_error is not None:
+            self._fail(400, upload_error)
             return
 
         model = self.get_argument("model", "").strip()
@@ -643,10 +649,9 @@ class TransformBenchmarkHandler(RequestHandler):
             self._fail(400, "Parameter 'limit' must be a non-negative integer (0 = all pairs).")
             return
 
-        try:
-            fmt, records = parse_benchmark(filename, content)
-        except ValueError as exc:
-            self._fail(400, str(exc))
+        fmt, records, parse_error = try_parse_benchmark(filename, content)
+        if parse_error is not None:
+            self._fail(400, parse_error)
             return
 
         todo = records if limit == 0 else records[:limit]
@@ -664,14 +669,19 @@ class TransformBenchmarkHandler(RequestHandler):
         )
 
         if response_mode == "file":
-            stem, ext = os.path.splitext(filename)
+            stem, ext = os.path.splitext(os.path.basename(filename))
+            # restrict the reflected filename to a safe charset so it cannot
+            # break out of the quoted Content-Disposition value
+            stem = re.sub(r"[^A-Za-z0-9._-]+", "_", stem) or "benchmark"
+            ext = ext if re.fullmatch(r"\.[A-Za-z0-9]+", ext or "") else ".json"
             self.set_header(
                 "Content-Type",
                 _EXPORT_CONTENT_TYPES.get(ext.lower(), "text/plain") + "; charset=utf-8",
             )
+            self.set_header("X-Content-Type-Options", "nosniff")
             self.set_header(
                 "Content-Disposition",
-                f'attachment; filename="{stem}-transformed{ext or ".json"}"',
+                f'attachment; filename="{stem}-transformed{ext}"',
             )
             self.write(fmt.export(results))
             return
@@ -701,8 +711,8 @@ class TransformBenchmarkHandler(RequestHandler):
                 for r in results
             ],
         }
-        self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(report, ensure_ascii=False))
+        # dict write: Tornado JSON-encodes and sets application/json itself
+        self.write(report)
 
 
 # ---------------------------------------------------------------------------

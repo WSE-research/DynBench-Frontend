@@ -694,11 +694,16 @@ def detect_format(filename: str, content: bytes) -> tuple[Optional[BenchmarkForm
     return None, text
 
 
-def parse_benchmark(filename: str, content: bytes):
-    """Detect the format and parse. Returns (format, records) or raises ValueError."""
+def try_parse_benchmark(filename: str, content: bytes):
+    """Detect the format and parse without raising.
+
+    Returns (format, records, error): on success error is None; on failure
+    format/records are None/[] and error is a human-readable message that is
+    safe to return to API clients (never derived from an exception).
+    """
     fmt, text = detect_format(filename, content)
     if fmt is None:
-        raise ValueError(
+        return None, [], (
             "Unsupported or unrecognized benchmark format. "
             "See the list of supported formats on the upload form."
         )
@@ -711,8 +716,16 @@ def parse_benchmark(filename: str, content: bytes):
             data = None
     records = fmt.parse(text, data)
     if not records:
-        raise ValueError(
+        return fmt, [], (
             f"The file was recognized as '{fmt.name}' but contains no usable "
             "question-query pairs."
         )
+    return fmt, records, None
+
+
+def parse_benchmark(filename: str, content: bytes):
+    """Detect the format and parse. Returns (format, records) or raises ValueError."""
+    fmt, records, error = try_parse_benchmark(filename, content)
+    if error is not None:
+        raise ValueError(error)
     return fmt, records
