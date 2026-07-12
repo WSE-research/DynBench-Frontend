@@ -374,7 +374,7 @@ with st.sidebar:
             st.session_state.models_list,
         )
 
-        _DIFFICULTY_ICONS = {"easy": "🟢", "similar": "≈", "hard": "🔴", "random": "🎲"}
+        _DIFFICULTY_ICONS = {"easy": "🍰", "similar": "⚖️", "hard": "🧐", "random": "🎲"}
         difficulty = st.radio(
             "Select difficulty for the entities in the generated question-query pair:",
             ["easy", "similar", "hard", "random"],

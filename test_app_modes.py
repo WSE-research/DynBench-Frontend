@@ -56,8 +56,9 @@ def test_single_mode_difficulty_options_have_icons_but_raw_values():
     at = _app().run()
     at.button(key="choose_single").click().run()
     difficulty = [r for r in at.radio if r.key != "_usage_mode_radio"][0]
-    # displayed options carry the recognition icons ("similar" = approx symbol) …
-    assert list(difficulty.options) == ["🟢 easy", "≈ similar", "🔴 hard", "🎲 random"]
+    # displayed options carry the recognition icons (easy = piece of cake,
+    # similar = scales of justice, hard = deep concentration) …
+    assert list(difficulty.options) == ["🍰 easy", "⚖️ similar", "🧐 hard", "🎲 random"]
     # … while the Python-side VALUE stays the raw option (API contract)
     assert difficulty.value == "similar"
 
