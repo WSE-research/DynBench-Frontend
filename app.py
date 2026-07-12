@@ -2,9 +2,7 @@ import os
 import logging
 import json
 import random
-import requests
 
-from enum import Enum
 
 from decouple import config
 

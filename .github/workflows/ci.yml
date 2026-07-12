@@ -36,7 +36,9 @@ jobs:
       - name: Unit tests with coverage gate
         run: |
           pytest test_api.py test_healthcheck.py test_sample_selector.py test_utils.py \
+            test_benchmark_formats.py \
             --cov=api --cov=utils --cov=sample_selector --cov=healthcheck --cov=settings \
+            --cov=benchmark_formats --cov=batch_ui \
             --cov-report=term-missing --cov-report=xml --cov-fail-under=65 \
             --junitxml=pytest-report.xml
       - name: Upload coverage
