@@ -132,7 +132,18 @@ MODEL=<Your model>
 
 == Running the Application
 
-=== Running with Python (Development)
+=== Quick start (Linux/macOS)
+
+[source,bash]
+----
+./start.sh              # create .venv, install dependencies, start the app
+PORT=8600 ./start.sh    # start on a custom port
+./start.sh --dev        # additionally install the dev tooling (pytest, ruff)
+----
+
+The script checks that `MODEL` and `DYNBENCH` are configured (environment or `.env`, see <<configuration>>), reinstalls dependencies only when the requirements files changed, and launches the app through `run.py` so that the REST API (`/api/transform`, `/api/transform-benchmark`) and the `/health` endpoint are registered alongside the Streamlit UI at `http://localhost:8501`.
+
+=== Running with Python (manual)
 
 1. Ensure you have installed the dependencies:
 +
@@ -141,11 +152,12 @@ MODEL=<Your model>
 pip install -r requirements.txt
 ----
 2. Set up your `.env` file (see <<configuration>>)
-3. Run the Streamlit application:
+3. Run the application:
 +
 [source,bash]
 ----
-streamlit run app.py
+python run.py           # UI + REST API + /health (recommended)
+streamlit run app.py    # UI only — the /api/* endpoints are NOT registered
 ----
 4. The application will open in your browser at `http://localhost:8501`
 
