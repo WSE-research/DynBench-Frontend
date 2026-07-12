@@ -72,6 +72,49 @@ class BenchmarkFormat:
 
 # --- helpers -----------------------------------------------------------------
 
+# LC-QuAD 1.0 (and other Virtuoso-era DBpedia benchmarks) use an aggregate
+# syntax that is not valid SPARQL 1.1: `SELECT [DISTINCT] COUNT(?x) WHERE …`.
+# Standard parsers (e.g. rdflib in the DynBench backend) reject it with
+# "Expected {SelectQuery | …}". Rewrite to the standard aggregate form.
+_VIRTUOSO_COUNT_DISTINCT_RE = re.compile(
+    r"SELECT\s+DISTINCT\s+COUNT\s*\(\s*(\?\w+)\s*\)", re.IGNORECASE
+)
+_VIRTUOSO_COUNT_RE = re.compile(r"SELECT\s+COUNT\s*\(\s*(\?\w+)\s*\)", re.IGNORECASE)
+
+
+def normalize_virtuoso_sparql(query: str) -> str:
+    """Rewrite Virtuoso-dialect aggregates into standard SPARQL 1.1."""
+    query = _VIRTUOSO_COUNT_DISTINCT_RE.sub(r"SELECT (COUNT(DISTINCT \1) AS ?cnt)", query)
+    query = _VIRTUOSO_COUNT_RE.sub(r"SELECT (COUNT(\1) AS ?cnt)", query)
+    return query
+
+
+# Well-known public SPARQL endpoints for knowledge-graph auto-detection.
+KNOWN_SPARQL_ENDPOINTS = {
+    "wikidata": "https://query.wikidata.org/sparql",
+    "dbpedia": "https://dbpedia.org/sparql",
+}
+
+_WIKIDATA_MARKERS_RE = re.compile(r"wikidata\.org|(?:^|[\s({<])(?:wdt?|wds|ps|pq):", re.IGNORECASE)
+_DBPEDIA_MARKERS_RE = re.compile(r"dbpedia\.org|(?:^|[\s({<])db[opr]:", re.IGNORECASE)
+
+
+def detect_kg_endpoint(records) -> Optional[str]:
+    """Guess the SPARQL endpoint from the records' queries.
+
+    Returns the well-known Wikidata or DBpedia endpoint when the queries
+    clearly point to one of them, else None.
+    """
+    text = " ".join(r.query for r in records[:50])
+    wikidata_hits = len(_WIKIDATA_MARKERS_RE.findall(text))
+    dbpedia_hits = len(_DBPEDIA_MARKERS_RE.findall(text))
+    if wikidata_hits == dbpedia_hits == 0:
+        return None
+    if wikidata_hits >= dbpedia_hits:
+        return KNOWN_SPARQL_ENDPOINTS["wikidata"]
+    return KNOWN_SPARQL_ENDPOINTS["dbpedia"]
+
+
 def _first_str(item: dict, keys: tuple[str, ...]) -> Optional[str]:
     for k in keys:
         v = item.get(k)
@@ -403,6 +446,14 @@ class LcQuad1Format(_JsonListFormat):
     )
     question_keys = ("corrected_question", "intermediary_question", "verbalized_question")
     query_keys = ("sparql_query",)
+
+    def parse(self, text, data):
+        records = super().parse(text, data)
+        # LC-QuAD 1.0 ships Virtuoso-dialect aggregates that standard SPARQL
+        # parsers reject — normalize before the pairs are processed
+        for record in records:
+            record.query = normalize_virtuoso_sparql(record.query)
+        return records
 
 
 class RubqFormat(_JsonListFormat):

@@ -12,7 +12,13 @@ import re
 
 import streamlit as st
 
-from benchmark_formats import FORMATS, BatchResult, parse_benchmark
+from benchmark_formats import (
+    FORMATS,
+    KNOWN_SPARQL_ENDPOINTS,
+    BatchResult,
+    detect_kg_endpoint,
+    parse_benchmark,
+)
 from utils import call_dynbench, format_sparql, submit_feedback
 
 logger = logging.getLogger(__name__)
@@ -197,7 +203,7 @@ def _export_filename(upload_name: str) -> str:
 
 
 def _render_api_example(model: str, difficulty: str, language: str, limit: int,
-                        upload_name: str):
+                        upload_name: str, endpoint: str = ""):
     """Show the curl equivalent of the current batch run (programmatic API)."""
     with st.expander("API request (curl)"):
         host = st.context.headers.get("Host", "localhost:8501")
@@ -206,6 +212,8 @@ def _render_api_example(model: str, difficulty: str, language: str, limit: int,
             f"{proto}://{host}/api/transform-benchmark"
             f"?model={model}&complexity={difficulty}&language={language}&limit={limit}"
         )
+        if endpoint.strip():
+            api_url += f"&endpoint={endpoint.strip()}"
         st.code(
             f"curl -X POST '{api_url}' \\\n"
             f"  -F 'file=@{upload_name}'",
@@ -272,10 +280,38 @@ any format changes.
         st.error(str(exc))
         return
 
+    # A newly uploaded/dropped file starts fresh: reset previous results and
+    # re-derive the knowledge-graph endpoint from the new file's queries.
+    _upload_sig = (uploaded.name, uploaded.size)
+    if st.session_state.get("batch_upload_sig") != _upload_sig:
+        st.session_state["batch_upload_sig"] = _upload_sig
+        for _key in ("batch_results", "batch_run_key", "batch_format",
+                     "batch_upload_name"):
+            st.session_state.pop(_key, None)
+        st.session_state["batch_endpoint"] = detect_kg_endpoint(records) or ""
+
     st.success(
         f"Recognized format **{fmt.name}** — {len(records)} question-query "
         f"pair{'s' if len(records) != 1 else ''} found."
     )
+
+    _detected = detect_kg_endpoint(records)
+    endpoint = st.text_input(
+        "SPARQL endpoint of the benchmark's knowledge graph (triplestore)",
+        key="batch_endpoint",
+        placeholder=KNOWN_SPARQL_ENDPOINTS["wikidata"],
+        help="Auto-filled when the file's queries point to Wikidata or "
+        "DBpedia — change it to your own triplestore endpoint if needed. "
+        "Note: entity substitution candidates are currently computed on "
+        "Wikidata; for other knowledge graphs the endpoint is used for "
+        "query execution.",
+    )
+    if _detected and endpoint == _detected:
+        _kg_name = next(
+            (name for name, url in KNOWN_SPARQL_ENDPOINTS.items() if url == _detected),
+            "the knowledge graph",
+        )
+        st.caption(f"🔎 The file's queries point to **{_kg_name.capitalize()}** — endpoint auto-filled.")
 
     limit = st.number_input(
         "Number of pairs to process (from the beginning of the file)",
@@ -291,7 +327,10 @@ any format changes.
         f"for {limit} pair{'s' if limit != 1 else ''}."
     )
 
-    run_key = (uploaded.name, uploaded.size, model, difficulty, language, int(limit))
+    run_key = (
+        uploaded.name, uploaded.size, model, difficulty, language, int(limit),
+        endpoint.strip(),
+    )
     if st.button(
         f"Process {int(limit)} pair{'s' if limit != 1 else ''} using "
         f"{model.split('/')[-1] if '/' in model else model} 🚀",
@@ -307,7 +346,7 @@ any format changes.
             )
             response, error = call_dynbench(
                 transform_url, record.question, record.query, model,
-                difficulty, language,
+                difficulty, language, endpoint=endpoint,
             )
             if response:
                 results.append(
@@ -327,7 +366,7 @@ any format changes.
         st.session_state["batch_format"] = fmt
         st.session_state["batch_upload_name"] = uploaded.name
 
-    _render_api_example(model, difficulty, language, int(limit), uploaded.name)
+    _render_api_example(model, difficulty, language, int(limit), uploaded.name, endpoint)
 
     results = st.session_state.get("batch_results")
     if not results:

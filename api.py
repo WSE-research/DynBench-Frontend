@@ -68,7 +68,9 @@ from utils import call_dynbench
 
 logger = logging.getLogger(__name__)
 
-_DYNBENCH_URL: str = config("DYNBENCH")
+# normalized in settings.py: both handlers post to the backend's /transform
+# endpoint whatever convention the DYNBENCH env value uses
+from settings import TRANSFORM_URL as _TRANSFORM_URL  # noqa: E402
 
 # Available models are read from the MODELS env var (comma-separated).
 # Falls back to the single MODEL var when MODELS is not set.
@@ -167,6 +169,18 @@ _OPENAPI_SPEC: dict = {
                             "the transformed benchmark in the exact same format as "
                             "the uploaded file."
                         ),
+                    },
+                    {
+                        "name": "endpoint",
+                        "in": "query",
+                        "required": False,
+                        "schema": {"type": "string"},
+                        "description": (
+                            "SPARQL endpoint of the benchmark's knowledge graph "
+                            "(triplestore). Forwarded to the DynBench backend; "
+                            "backends without endpoint support ignore it."
+                        ),
+                        "example": "https://query.wikidata.org/sparql",
                     },
                     {
                         "name": "filename",
@@ -550,7 +564,7 @@ class TransformHandler(RequestHandler):
         loop = asyncio.get_event_loop()
         result, error = await loop.run_in_executor(
             _executor,
-            lambda: call_dynbench(_DYNBENCH_URL, question, query, model, complexity, language),
+            lambda: call_dynbench(_TRANSFORM_URL, question, query, model, complexity, language),
         )
 
         if result is not None:
@@ -573,7 +587,7 @@ _EXPORT_CONTENT_TYPES = {
 }
 
 
-def _process_benchmark_records(records, model, complexity, language):
+def _process_benchmark_records(records, model, complexity, language, endpoint=None):
     """Sequentially transform *records* (runs inside the executor thread)."""
     results = []
     for i, record in enumerate(records):
@@ -581,7 +595,8 @@ def _process_benchmark_records(records, model, complexity, language):
             "API batch: pair %d/%d (id %r)", i + 1, len(records), record.id
         )
         response, error = call_dynbench(
-            _DYNBENCH_URL, record.question, record.query, model, complexity, language
+            _TRANSFORM_URL, record.question, record.query, model, complexity,
+            language, endpoint=endpoint,
         )
         if response:
             results.append(
@@ -655,6 +670,7 @@ class TransformBenchmarkHandler(RequestHandler):
             return
         complexity = self.get_argument("complexity", "normal")
         language = self.get_argument("language", "en")
+        endpoint = self.get_argument("endpoint", "").strip() or None
         response_mode = self.get_argument("response", "json")
         if response_mode not in ("json", "file"):
             self._fail(400, "Parameter 'response' must be 'json' or 'file'.")
@@ -685,7 +701,7 @@ class TransformBenchmarkHandler(RequestHandler):
         loop = asyncio.get_event_loop()
         results = await loop.run_in_executor(
             _executor,
-            lambda: _process_benchmark_records(todo, model, complexity, language),
+            lambda: _process_benchmark_records(todo, model, complexity, language, endpoint),
         )
 
         if response_mode == "file":

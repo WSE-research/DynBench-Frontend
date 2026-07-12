@@ -5,6 +5,7 @@ import time
 from urllib.parse import urlparse, urlunparse
 
 import requests
+import tornado.web
 from tornado.web import RequestHandler
 from tornado.routing import Rule, PathMatches
 import streamlit.web.server.server as _st_server
@@ -113,7 +114,7 @@ class HealthHandler(RequestHandler):
 _original_start_listening = _st_server.start_listening
 
 
-def _patched_start_listening(app: "tornado.web.Application") -> None:  # type: ignore[name-defined]
+def _patched_start_listening(app: tornado.web.Application) -> None:
     # In Tornado 6.4+ handlers live in app.wildcard_router.rules.
     # Prepend our route so it is matched before the catch-all static-file handler.
     app.wildcard_router.rules.insert(0, Rule(PathMatches(r"/health"), HealthHandler))

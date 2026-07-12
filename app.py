@@ -4,7 +4,6 @@ import json
 import random
 
 
-from decouple import config
 
 import colorlog
 import streamlit as st
@@ -35,6 +34,9 @@ from settings import (
     LANGUAGE_CODES,
     GITHUB_REPO,
     DEFAULT_QUERY_INPUT_HEIGHT,
+    DYNBENCH_URL,
+    TRANSFORM_URL,
+    FEEDBACK_URL,
 )
 
 handler = colorlog.StreamHandler()
@@ -87,9 +89,9 @@ st.set_page_config(
 
 # One-time running code
 if 'dyn_base_url' not in st.session_state:
-    st.session_state.dyn_base_url  = config('DYNBENCH')
-    st.session_state.transform_url = config('DYNBENCH')+'/transform'
-    st.session_state.feedback_url  = config('DYNBENCH')+'/feedback'
+    st.session_state.dyn_base_url  = DYNBENCH_URL
+    st.session_state.transform_url = TRANSFORM_URL
+    st.session_state.feedback_url  = FEEDBACK_URL
 
     st.session_state.models_list = get_models()
 

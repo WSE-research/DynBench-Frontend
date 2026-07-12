@@ -280,6 +280,64 @@ def test_sib_turtle():
     assert NEW_Q in exported and NEW_S in exported
 
 
+# --- Virtuoso-dialect normalization (LC-QuAD 1.0) ------------------------------
+
+def test_lcquad1_normalizes_virtuoso_count_aggregate():
+    content = json.dumps([
+        {
+            "_id": "1501",
+            "corrected_question": "How many movies did Stanley Kubrick direct?",
+            "sparql_query": "SELECT DISTINCT COUNT(?uri) WHERE { ?uri dbo:director dbr:Stanley_Kubrick }",
+        }
+    ])
+    _, records = parse_benchmark("lcquad-train.json", content.encode())
+    assert records[0].query == (
+        "SELECT (COUNT(DISTINCT ?uri) AS ?cnt) WHERE { ?uri dbo:director dbr:Stanley_Kubrick }"
+    )
+
+
+def test_normalize_virtuoso_sparql_variants():
+    from benchmark_formats import normalize_virtuoso_sparql
+
+    assert normalize_virtuoso_sparql("SELECT COUNT(?x) WHERE { ?x ?p ?o }") == (
+        "SELECT (COUNT(?x) AS ?cnt) WHERE { ?x ?p ?o }"
+    )
+    # already-standard aggregates and non-aggregate queries stay unchanged
+    standard = "SELECT (COUNT(DISTINCT ?x) AS ?c) WHERE { ?x ?p ?o }"
+    assert normalize_virtuoso_sparql(standard) == standard
+    ask = "ASK WHERE { ?x ?p ?o }"
+    assert normalize_virtuoso_sparql(ask) == ask
+
+
+# --- knowledge-graph endpoint detection -----------------------------------------
+
+def test_detect_kg_endpoint():
+    from benchmark_formats import detect_kg_endpoint
+
+    _, wikidata_records = parse_benchmark("qald.json", json.dumps({
+        "questions": [{
+            "id": "1",
+            "question": [{"language": "en", "string": "Q?"}],
+            "query": {"sparql": "SELECT ?x WHERE { wd:Q42 wdt:P31 ?x }"},
+        }]
+    }).encode())
+    assert detect_kg_endpoint(wikidata_records) == "https://query.wikidata.org/sparql"
+
+    _, dbpedia_records = parse_benchmark("lcquad.json", json.dumps([{
+        "_id": "1",
+        "corrected_question": "Q?",
+        "sparql_query": "SELECT ?uri WHERE { ?uri dbo:director dbr:Stanley_Kubrick }",
+    }]).encode())
+    assert detect_kg_endpoint(dbpedia_records) == "https://dbpedia.org/sparql"
+
+    _, other_records = parse_benchmark("other.json", json.dumps([{
+        "id": "1",
+        "question": "Q?",
+        "sparql": "SELECT ?x WHERE { ?x ns:location.country.languages_spoken ?y }",
+    }]).encode())
+    assert detect_kg_endpoint(other_records) is None
+
+
 # --- error handling ----------------------------------------------------------------
 
 def test_unknown_format_raises():

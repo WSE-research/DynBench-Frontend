@@ -485,7 +485,8 @@ class TestTransformBenchmarkBadRequest(_BenchmarkHandlerTestBase):
         )
 
 
-def _batch_backend_success(url, question, query, model, complexity, language):
+def _batch_backend_success(url, question, query, model, complexity, language,
+                           endpoint=None):
     return (
         {
             "transformed_question": f"NEW {question}",
@@ -564,10 +565,27 @@ class TestTransformBenchmarkSuccess(_BenchmarkHandlerTestBase):
             exported["questions"][0]["query"]["sparql"].startswith("NEW SELECT")
         )
 
+    def test_endpoint_parameter_is_forwarded_to_backend(self):
+        with patch.object(_api, "call_dynbench", side_effect=_batch_backend_success) as mock:
+            body, ctype = _multipart("qald.json", _QALD_FILE)
+            resp = self.fetch(
+                "/api/transform-benchmark?model=gpt-4o&limit=1"
+                "&endpoint=https%3A%2F%2Fdbpedia.org%2Fsparql",
+                method="POST", body=body, headers={"Content-Type": ctype})
+        self.assertEqual(resp.code, 200)
+        self.assertEqual(mock.call_args.kwargs.get("endpoint"), "https://dbpedia.org/sparql")
+
+    def test_no_endpoint_means_none(self):
+        with patch.object(_api, "call_dynbench", side_effect=_batch_backend_success) as mock:
+            body, ctype = _multipart("qald.json", _QALD_FILE)
+            self.fetch("/api/transform-benchmark?model=gpt-4o&limit=1",
+                       method="POST", body=body, headers={"Content-Type": ctype})
+        self.assertIsNone(mock.call_args.kwargs.get("endpoint"))
+
     def test_per_pair_backend_failure_is_reported_not_fatal(self):
         calls = {"n": 0}
 
-        def flaky(url, question, query, model, complexity, language):
+        def flaky(url, question, query, model, complexity, language, endpoint=None):
             calls["n"] += 1
             if calls["n"] == 2:
                 return None, "HTTP 503: Service Unavailable"
