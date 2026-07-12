@@ -32,6 +32,27 @@ toc::[]
 * Adjustable comparability of generated questions through the use of entities for generated questions (importance of entities in generated questions in comparison to is chosen to ensure difficulty to be "easy", "similar", "hard", or "random")
 * Provide random, multilingual samples from benchmark datasets for easier tool exploration
 * Feedback collection for computed transformation steps
+* Benchmark file upload mode: process a complete benchmark file pair by pair and export the transformed benchmark in the exact format of the uploaded file
+
+== Benchmark file upload mode
+
+Switch the input mode from "Single question-query pair" to "Benchmark file upload" to process a complete benchmark file. Every question-query pair is sent iteratively to the DynBench backend with the settings from the sidebar (model, entity difficulty, target language). For each pair a result block shows the given question and SPARQL query next to the computed pair; recognized named entities in the questions are highlighted and a mouse-over overlay shows the human-readable label and the knowledge-graph resource URL. Each computed pair can be rated (👍/👎), which is submitted to the regular feedback endpoint.
+
+The number of processed pairs is user-configurable (default: 10, counted from the beginning of the file) because every pair is one LLM round-trip. The computed pairs can be downloaded as a new benchmark file in the *exact same format* as the uploaded file.
+
+The file format is detected automatically (see `benchmark_formats.py`). Supported formats:
+
+* QALD-style JSON (QALD-9, QALD-9-plus, QALD-10; also DBLP-QuAD, SciQA, VQuAnDa and BESTIARY variants)
+* QALD XML (older QALD editions, e.g. QALD-4 biomedical)
+* LC-QuAD 1.0 and LC-QuAD 2.0
+* RuBQ 1.0/2.0
+* GrailQA
+* WebQuestionsSP
+* JSON lists with `question` + `sparql` keys (KQA Pro, ComplexWebQuestions, CFQ exports, …)
+* Flat DynBench JSON (the bundled DynQALD/DynRuBQ sample format)
+* CSV/TSV with named question and SPARQL columns (e.g. Spider4SPARQL)
+* Single SPARQL files (`.rq`/`.sparql`) with the question in leading `#` comments (Bio-SODA benchmark style)
+* SIB sparql-examples Turtle files (`rdfs:comment` + `sh:select`)
 
 == Prerequisites
 

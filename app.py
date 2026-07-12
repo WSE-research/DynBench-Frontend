@@ -22,12 +22,13 @@ from sample_selector import (
     build_samples_by_language,
 )
 from utils import (
-    call_dynbench, 
-    output_row, 
-    format_sparql, 
+    call_dynbench,
+    output_row,
+    format_sparql,
     submit_feedback,
     get_models
 )
+from batch_ui import render_batch_mode
 from settings import (
     PAGE_IMAGE,
     PAGE_TITLE,
@@ -125,12 +126,6 @@ if 'dyn_base_url' not in st.session_state:
     # No pre-selection: inputs start empty until params or button set a record
     st.session_state.random_record = None
 
-
-st.set_page_config(
-    layout="wide",
-    page_title=PAGE_TITLE,
-    page_icon=Image.open(PAGE_IMAGE),
-)
 
 with (
     open("css/style_menu_logo.css") as f,
@@ -302,6 +297,41 @@ st.title("DynBench: Question-Query Pair Generator")
 st.subheader(
     "Generate new question-query pairs for overcoming memorization effects during benchmarking LLM-based systems."
 )
+
+
+def page_footer():
+    """Inject the menu JavaScript and the GitHub ribbon (both display modes)."""
+    with open("js/change_menu.js", "r") as f:
+        html(f"<script style='display:none'>{f.read()}</script>")
+
+    html(
+        """
+        <script>
+        github_ribbon = parent.window.document.createElement("div");
+        github_ribbon.innerHTML = '<a id="github-fork-ribbon" class="github-fork-ribbon right-bottom" href="%s" target="_blank" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>';
+        if (parent.window.document.getElementById("github-fork-ribbon") == null) {
+            parent.window.document.body.appendChild(github_ribbon.firstChild);
+        }
+        </script>
+        """
+        % (GITHUB_REPO,)
+    )
+
+
+_mode = st.radio(
+    "Input mode",
+    ["Single question-query pair", "Benchmark file upload"],
+    horizontal=True,
+    help="Switch to 'Benchmark file upload' to process a complete benchmark "
+    "file pair by pair instead of entering a single question-query pair.",
+)
+if _mode == "Benchmark file upload":
+    render_batch_mode(
+        st.session_state.transform_url, model, difficulty, LANGUAGES[language]
+    )
+    page_footer()
+    st.stop()
+
 st.write(
     "Generate new question-query pairs that are compatible with the original question-query pair and have a user-selected difficulty (configurable on the sidebar). The difficulty is measured by the PageRank of the entities in the question-query pair. The PageRank is calculated based on the Wikidata knowledge graph."
 )
@@ -622,20 +652,4 @@ if "new_question" in st.session_state:
                 st.text(str(_raw_value))
 
 
-with open("js/change_menu.js", "r") as f:
-    javascript = f.read()
-    html(f"<script style='display:none'>{javascript}</script>")
-
-
-html(
-"""
-<script>
-github_ribbon = parent.window.document.createElement("div");            
-github_ribbon.innerHTML = '<a id="github-fork-ribbon" class="github-fork-ribbon right-bottom" href="%s" target="_blank" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>';
-if (parent.window.document.getElementById("github-fork-ribbon") == null) {
-    parent.window.document.body.appendChild(github_ribbon.firstChild);
-}
-</script>
-"""
-% (GITHUB_REPO,)
-)
+page_footer()
