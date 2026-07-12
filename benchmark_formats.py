@@ -694,19 +694,30 @@ def detect_format(filename: str, content: bytes) -> tuple[Optional[BenchmarkForm
     return None, text
 
 
+# Static, user-input-free error messages keyed by error code. API handlers
+# must respond with a lookup into this table (not with strings travelling in
+# tuples next to request data — taint trackers merge tuple elements).
+PARSE_ERROR_MESSAGES = {
+    "unrecognized-format": (
+        "Unsupported or unrecognized benchmark format. "
+        "See the list of supported formats on the upload form."
+    ),
+    "no-pairs": (
+        "The file was recognized as a supported benchmark format but "
+        "contains no usable question-query pairs."
+    ),
+}
+
+
 def try_parse_benchmark(filename: str, content: bytes):
     """Detect the format and parse without raising.
 
-    Returns (format, records, error): on success error is None; on failure
-    format/records are None/[] and error is a human-readable message that is
-    safe to return to API clients (never derived from an exception).
+    Returns (format, records, error_code): on success error_code is None; on
+    failure it is a key of PARSE_ERROR_MESSAGES.
     """
     fmt, text = detect_format(filename, content)
     if fmt is None:
-        return None, [], (
-            "Unsupported or unrecognized benchmark format. "
-            "See the list of supported formats on the upload form."
-        )
+        return None, [], "unrecognized-format"
     data = None
     stripped = (text or "").lstrip()
     if stripped.startswith(("{", "[")):
@@ -716,16 +727,18 @@ def try_parse_benchmark(filename: str, content: bytes):
             data = None
     records = fmt.parse(text, data)
     if not records:
-        return fmt, [], (
-            f"The file was recognized as '{fmt.name}' but contains no usable "
-            "question-query pairs."
-        )
+        return fmt, [], "no-pairs"
     return fmt, records, None
 
 
 def parse_benchmark(filename: str, content: bytes):
     """Detect the format and parse. Returns (format, records) or raises ValueError."""
-    fmt, records, error = try_parse_benchmark(filename, content)
-    if error is not None:
-        raise ValueError(error)
+    fmt, records, error_code = try_parse_benchmark(filename, content)
+    if error_code == "no-pairs":
+        raise ValueError(
+            f"The file was recognized as '{fmt.name}' but contains no usable "
+            "question-query pairs."
+        )
+    if error_code is not None:
+        raise ValueError(PARSE_ERROR_MESSAGES[error_code])
     return fmt, records

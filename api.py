@@ -58,7 +58,12 @@ from tornado.routing import PathMatches, Rule
 from tornado.web import RequestHandler
 
 import streamlit.web.server.server as _st_server
-from benchmark_formats import FORMATS, BatchResult, try_parse_benchmark
+from benchmark_formats import (
+    FORMATS,
+    PARSE_ERROR_MESSAGES,
+    BatchResult,
+    try_parse_benchmark,
+)
 from utils import call_dynbench
 
 logger = logging.getLogger(__name__)
@@ -518,7 +523,16 @@ class TransformHandler(RequestHandler):
         query = body.get("query", "").strip()
         model = body.get("model", "").strip()
 
-        missing = [f for f, v in [("question", question), ("query", query), ("model", model)] if not v]
+        # build the field list without putting the (user-provided) values into
+        # tuples next to the field names — CodeQL's taint tracking merges
+        # tuple elements, which flagged the response as reflected XSS
+        missing = []
+        if not question:
+            missing.append("question")
+        if not query:
+            missing.append("query")
+        if not model:
+            missing.append("model")
         if missing:
             self.set_status(400)
             self.write({"error": f"Missing required field(s): {', '.join(missing)}"})
@@ -603,33 +617,37 @@ class TransformBenchmarkHandler(RequestHandler):
         self.write({"error": message})
 
     def _uploaded_file(self):
-        """Return (filename, content, error) from multipart or the raw body.
+        """Return (filename, content) from multipart or the raw request body.
 
-        Exactly one of content/error is set; error is always a static message.
+        On a missing file/filename this writes the 400 response itself and
+        returns None. The error messages are passed to _fail directly as
+        literals so no request-derived value shares a data path with them.
         """
         files = self.request.files.get("file")
         if files:
             upload = files[0]
-            return upload.filename or "benchmark.json", upload.body, None
+            return upload.filename or "benchmark.json", upload.body
         if self.request.body:
             filename = self.get_argument("filename", "")
             if not filename:
-                return None, None, (
+                self._fail(400, (
                     "When the file is sent as the raw request body, the "
                     "'filename' parameter is required for format detection "
                     "(alternatively upload as multipart/form-data field 'file')."
-                )
-            return filename, self.request.body, None
-        return None, None, (
+                ))
+                return None
+            return filename, self.request.body
+        self._fail(400, (
             "No benchmark file supplied. Upload it as multipart/form-data "
             "field 'file' or as the raw request body with ?filename=…"
-        )
+        ))
+        return None
 
     async def post(self) -> None:
-        filename, content, upload_error = self._uploaded_file()
-        if upload_error is not None:
-            self._fail(400, upload_error)
+        uploaded = self._uploaded_file()
+        if uploaded is None:
             return
+        filename, content = uploaded
 
         model = self.get_argument("model", "").strip()
         if not model:
@@ -649,9 +667,11 @@ class TransformBenchmarkHandler(RequestHandler):
             self._fail(400, "Parameter 'limit' must be a non-negative integer (0 = all pairs).")
             return
 
-        fmt, records, parse_error = try_parse_benchmark(filename, content)
-        if parse_error is not None:
-            self._fail(400, parse_error)
+        fmt, records, parse_error_code = try_parse_benchmark(filename, content)
+        if parse_error_code is not None:
+            # static-table lookup: the response message can never contain
+            # request-derived data, whatever the analysis thinks of the tuple
+            self._fail(400, PARSE_ERROR_MESSAGES[parse_error_code])
             return
 
         todo = records if limit == 0 else records[:limit]
