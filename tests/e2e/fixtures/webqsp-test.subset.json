@@ -1,0 +1,114 @@
+{
+  "Version": "1.0",
+  "FreebaseVersion": "2015-08-09",
+  "Questions": [
+    {
+      "QuestionId": "WebQTest-0",
+      "RawQuestion": "what does jamaican people speak?",
+      "ProcessedQuestion": "what does jamaican people speak",
+      "Parses": [
+        {
+          "ParseId": "WebQTest-0.P0",
+          "AnnotatorId": 0,
+          "AnnotatorComment": {
+            "ParseQuality": "Complete",
+            "QuestionQuality": "Good",
+            "Confidence": "Normal",
+            "FreeFormComment": "First-round parse verification"
+          },
+          "Sparql": "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ns:m.03_r3)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\nns:m.03_r3 ns:location.country.languages_spoken ?x .\n}\n",
+          "PotentialTopicEntityMention": "jamaican",
+          "TopicEntityName": "Jamaica",
+          "TopicEntityMid": "m.03_r3",
+          "InferentialChain": [
+            "location.country.languages_spoken"
+          ],
+          "Constraints": [],
+          "Time": null,
+          "Order": null,
+          "Answers": [
+            {
+              "AnswerType": "Entity",
+              "AnswerArgument": "m.01428y",
+              "EntityName": "Jamaican English"
+            },
+            {
+              "AnswerType": "Entity",
+              "AnswerArgument": "m.04ygk0",
+              "EntityName": "Jamaican Creole English Language"
+            }
+          ]
+        },
+        {
+          "ParseId": "WebQTest-0.P1",
+          "AnnotatorId": 0,
+          "AnnotatorComment": {
+            "ParseQuality": "Complete",
+            "QuestionQuality": "Good",
+            "Confidence": "Normal",
+            "FreeFormComment": "First-round parse verification"
+          },
+          "Sparql": "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ns:m.03_r3)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\nns:m.03_r3 ns:location.country.official_language ?x .\n}\n",
+          "PotentialTopicEntityMention": "jamaican",
+          "TopicEntityName": "Jamaica",
+          "TopicEntityMid": "m.03_r3",
+          "InferentialChain": [
+            "location.country.official_language"
+          ],
+          "Constraints": [],
+          "Time": null,
+          "Order": null,
+          "Answers": [
+            {
+              "AnswerType": "Entity",
+              "AnswerArgument": "m.01428y",
+              "EntityName": "Jamaican English"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "QuestionId": "WebQTest-1",
+      "RawQuestion": "what did james k polk do before he was president?",
+      "ProcessedQuestion": "what did james k polk do before he was president",
+      "Parses": [
+        {
+          "ParseId": "WebQTest-1.P0",
+          "AnnotatorId": 3,
+          "AnnotatorComment": {
+            "ParseQuality": "Complete",
+            "QuestionQuality": "Good",
+            "Confidence": "Normal",
+            "FreeFormComment": "!Manual Sparql. Comment: Done.  Assuming the question is about the government positions before President.. Original comment: F cannot handle before"
+          },
+          "Sparql": "#MANUAL SPARQL\nPREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\n  {\n    SELECT ?pFrom \n    WHERE {\n      ns:m.042f1 ns:government.politician.government_positions_held ?y . # James K. Polk\n      ?y ns:government.government_position_held.office_position_or_title ?x ; \n         ns:government.government_position_held.basic_title ns:m.060c4 ; # President\n         ns:government.government_position_held.from ?pFrom .\n    }\n  }\n  ns:m.042f1 ns:government.politician.government_positions_held ?y . # James K. Polk\n  ?y ns:government.government_position_held.office_position_or_title ?x ; \n     ns:government.government_position_held.from ?from .\n  \n  FILTER(xsd:dateTime(?pFrom) - xsd:dateTime(?from) > 0)\n}",
+          "PotentialTopicEntityMention": "james k polk",
+          "TopicEntityName": "James K. Polk",
+          "TopicEntityMid": "m.042f1",
+          "InferentialChain": null,
+          "Constraints": [],
+          "Time": null,
+          "Order": null,
+          "Answers": [
+            {
+              "AnswerType": "Entity",
+              "AnswerArgument": "m.02_bcst",
+              "EntityName": "United States Representative"
+            },
+            {
+              "AnswerType": "Entity",
+              "AnswerArgument": "m.04x_n9q",
+              "EntityName": "Governor of Tennessee"
+            },
+            {
+              "AnswerType": "Entity",
+              "AnswerArgument": "m.0cgqx",
+              "EntityName": "Speaker of the United States House of Representatives"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

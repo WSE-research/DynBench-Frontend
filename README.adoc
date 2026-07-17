@@ -32,6 +32,47 @@ toc::[]
 * Adjustable comparability of generated questions through the use of entities for generated questions (importance of entities in generated questions in comparison to is chosen to ensure difficulty to be "easy", "similar", "hard", or "random")
 * Provide random, multilingual samples from benchmark datasets for easier tool exploration
 * Feedback collection for computed transformation steps
+* Benchmark file upload mode: process a complete benchmark file pair by pair and export the transformed benchmark in the exact format of the uploaded file
+
+== Usage modes
+
+The usage mode is selected in the sidebar box "Usage mode" (below the logo) and offers three options: *✍️ one question+query* (transform a single pair), *📤 file upload* (process a complete benchmark file), and *🔌 RESTful API* (pointers to the OpenAPI description of the programmatic API for both usage modes). On the very first visit a centered selector is shown instead; the chosen mode is stored in a cookie so the preferred mode is activated by default on later visits. The page title carries a tag-like label showing the active mode.
+
+== Benchmark file upload mode
+
+In the usage mode "file upload" a complete benchmark file is processed. Every question-query pair is sent iteratively to the DynBench backend with the settings from the sidebar (model, entity difficulty, target language). For each pair a result block shows the given question and SPARQL query next to the computed pair; recognized named entities in the questions are highlighted and a mouse-over overlay shows the human-readable label and the knowledge-graph resource URL. Each computed pair can be rated (👍/👎), which is submitted to the regular feedback endpoint.
+
+The number of processed pairs is user-configurable (default: 10, counted from the beginning of the file) because every pair is one LLM round-trip. The computed pairs can be downloaded as a new benchmark file in the *exact same format* as the uploaded file.
+
+The file format is detected automatically (see `benchmark_formats.py`). Supported formats:
+
+* QALD-style JSON (QALD-9, QALD-9-plus, QALD-10; also DBLP-QuAD, SciQA, VQuAnDa and BESTIARY variants)
+* QALD XML (older QALD editions, e.g. QALD-4 biomedical)
+* LC-QuAD 1.0 and LC-QuAD 2.0
+* RuBQ 1.0/2.0
+* GrailQA
+* WebQuestionsSP
+* JSON lists with `question` + `sparql` keys (KQA Pro, ComplexWebQuestions, CFQ exports, …)
+* Flat DynBench JSON (the bundled DynQALD/DynRuBQ sample format)
+* CSV/TSV with named question and SPARQL columns (e.g. Spider4SPARQL)
+* Single SPARQL files (`.rq`/`.sparql`) with the question in leading `#` comments (Bio-SODA benchmark style)
+* SIB sparql-examples Turtle files (`rdfs:comment` + `sh:select`)
+
+=== Programmatic access (REST API)
+
+The same batch processing is available to programs via `POST /api/transform-benchmark` (interactive Swagger documentation at `GET /api/transform-benchmark`, machine-readable spec at `/api/openapi.json`). Upload the benchmark file as multipart/form-data (field `file`) or as the raw request body with a `filename` parameter for format detection:
+
+```bash
+# per-pair JSON report for the first 10 pairs
+curl -X POST 'https://<host>/api/transform-benchmark?model=gpt-4o&limit=10' \
+  -F 'file=@qald-9-test.json'
+
+# transformed benchmark in the exact format of the upload, all pairs
+curl -X POST 'https://<host>/api/transform-benchmark?model=gpt-4o&limit=0&response=file' \
+  -F 'file=@qald-9-test.json' -o qald-9-test-transformed.json
+```
+
+Parameters: `model` (required, see `GET /api/models`), `complexity` (`easy|normal|hard|random`, default `normal`), `language` (ISO 639-1, default `en`), `limit` (pairs from the beginning of the file, default `10`, `0` = all), `response` (`json` = per-pair report incl. entity replacements and per-pair errors, `file` = the transformed benchmark in the upload's format). Note that every pair is one LLM round-trip, so large `limit` values lead to long-running requests.
 
 == Prerequisites
 
@@ -95,7 +136,18 @@ MODEL=<Your model>
 
 == Running the Application
 
-=== Running with Python (Development)
+=== Quick start (Linux/macOS)
+
+[source,bash]
+----
+./start.sh              # create .venv, install dependencies, start the app
+PORT=8600 ./start.sh    # start on a custom port
+./start.sh --dev        # additionally install the dev tooling (pytest, ruff)
+----
+
+The script checks that `MODEL` and `DYNBENCH` are configured (environment or `.env`, see <<configuration>>), reinstalls dependencies only when the requirements files changed, and launches the app through `run.py` so that the REST API (`/api/transform`, `/api/transform-benchmark`) and the `/health` endpoint are registered alongside the Streamlit UI at `http://localhost:8501`.
+
+=== Running with Python (manual)
 
 1. Ensure you have installed the dependencies:
 +
@@ -104,11 +156,12 @@ MODEL=<Your model>
 pip install -r requirements.txt
 ----
 2. Set up your `.env` file (see <<configuration>>)
-3. Run the Streamlit application:
+3. Run the application:
 +
 [source,bash]
 ----
-streamlit run app.py
+python run.py           # UI + REST API + /health (recommended)
+streamlit run app.py    # UI only — the /api/* endpoints are NOT registered
 ----
 4. The application will open in your browser at `http://localhost:8501`
 

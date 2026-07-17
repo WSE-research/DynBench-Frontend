@@ -1,0 +1,3 @@
+kg_name,question,query
+concert_singer,How many singers do we have?,select (count( *) as ?aggregation_all) where { ?t1 a :singer .        }
+concert_singer,What is the total number of singers?,select (count( *) as ?aggregation_all) where { ?t1 a :singer .        }

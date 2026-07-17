@@ -7,7 +7,21 @@ GITHUB_REPO = config(
     "GITHUB_REPO", "https://github.com/WSE-research/DynBench-Frontend.git"
 )
 
-DYNBENCH_URL = config('DYNBENCH')
+def _normalize_backend_url(raw: str) -> str:
+    """Return the backend BASE url whatever convention the env value uses.
+
+    Deployments have configured DYNBENCH both as the plain base URL (with or
+    without a trailing slash) and as the full ``…/transform`` endpoint; the
+    mixed conventions produced URLs like ``…//transform`` or requests to the
+    backend root. Normalize to the base URL without a trailing slash.
+    """
+    url = raw.strip().rstrip('/')
+    if url.endswith('/transform'):
+        url = url[: -len('/transform')]
+    return url
+
+
+DYNBENCH_URL = _normalize_backend_url(config('DYNBENCH'))
 TRANSFORM_URL = DYNBENCH_URL + '/transform'
 FEEDBACK_URL = DYNBENCH_URL + '/feedback'
 MODELS_URL = DYNBENCH_URL + '/v1/models'

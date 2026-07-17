@@ -36,8 +36,13 @@ def get_models():
         return ['openai/gpt-4o',]
 
 
-def call_dynbench(url, question, query, model, complexity="normal", language="en"):
-    """Return (result_dict, error_str). On success error_str is None; on failure result_dict is None."""
+def call_dynbench(url, question, query, model, complexity="normal", language="en",
+                  endpoint=None):
+    """Return (result_dict, error_str). On success error_str is None; on failure result_dict is None.
+
+    ``endpoint`` optionally names the SPARQL endpoint of the benchmark's
+    knowledge graph; older backends without endpoint support ignore the field.
+    """
     headers = {}
     data = {
         "question": question,
@@ -47,6 +52,8 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
         "complexity": complexity,
         "checks": ["sentence"],
     }
+    if endpoint and endpoint.strip():
+        data["endpoint"] = endpoint.strip()
 
     try:
         r = requests.post(url, headers=headers, json=data, timeout=60)
@@ -104,6 +111,12 @@ def call_dynbench(url, question, query, model, complexity="normal", language="en
         k for k in ("transformed_question", "transformed_query") if not body.get(k)
     ]
     if missing:
+        # surface the backend's own failure reason when it explains itself
+        # (e.g. "no valid replacement found" for KGs without substitution data)
+        extra = body.get("extra") or {}
+        reason = extra.get("error") or extra.get("Failure reason")
+        if reason:
+            return None, f"The backend could not generate a pair: {reason}"
         return None, f"Response missing field(s): {', '.join(missing)} — body: {body}"
 
     return body, None

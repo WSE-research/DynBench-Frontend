@@ -4,10 +4,8 @@ Tests for healthcheck.py.
 Streamlit's server module is mocked before healthcheck is imported so the
 tests do not depend on a running Streamlit instance.
 """
-import importlib
 import json
 import sys
-import threading
 import unittest
 from unittest.mock import MagicMock, patch
 

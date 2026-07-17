@@ -1,0 +1,153 @@
+[
+  {
+    "qid": "3202959008000",
+    "question": "what is the role of opera designer gig who designed the telephone / the medium?",
+    "answer": {
+      "answer_type": [
+        "Entity"
+      ],
+      "answer_argument": [
+        "m.0b787yg"
+      ],
+      "entity_name": [
+        "Set Designer"
+      ]
+    },
+    "function": "none",
+    "num_node": 3,
+    "num_edge": 2,
+    "graph_query": {
+      "nodes": {
+        "nid": [
+          0,
+          1,
+          2
+        ],
+        "node_type": [
+          "class",
+          "class",
+          "entity"
+        ],
+        "id": [
+          "opera.opera_designer_role",
+          "opera.opera_designer_gig",
+          "m.0pm2fgf"
+        ],
+        "class": [
+          "opera.opera_designer_role",
+          "opera.opera_designer_gig",
+          "opera.opera_production"
+        ],
+        "friendly_name": [
+          "Opera Designer Role",
+          "Opera Designer Gig",
+          "The Telephone / The Medium"
+        ],
+        "question_node": [
+          1,
+          0,
+          0
+        ],
+        "function": [
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      "edges": {
+        "start": [
+          1,
+          2
+        ],
+        "end": [
+          0,
+          1
+        ],
+        "relation": [
+          "opera.opera_designer_gig.design_role",
+          "opera.opera_production.designers"
+        ],
+        "friendly_name": [
+          "Design Role",
+          "Designers"
+        ]
+      }
+    },
+    "sparql_query": "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX : <http://rdf.freebase.com/ns/> \nSELECT (?x0 AS ?value) WHERE {\nSELECT DISTINCT ?x0  WHERE { \n?x0 :type.object.type :opera.opera_designer_role . \n?x1 :type.object.type :opera.opera_designer_gig . \nVALUES ?x2 { :m.0pm2fgf } \n?x1 :opera.opera_designer_gig.design_role ?x0 . \n?x2 :opera.opera_production.designers ?x1 . \nFILTER ( ?x0 != ?x1 && ?x0 != ?x2 && ?x1 != ?x2  )\n}\n}",
+    "domains": [
+      "opera"
+    ],
+    "level": "i.i.d.",
+    "s_expression": "(AND opera.opera_designer_role (JOIN (R opera.opera_designer_gig.design_role) (JOIN (R opera.opera_production.designers) m.0pm2fgf)))"
+  },
+  {
+    "qid": "2100654013000",
+    "question": "semaphore railway line is on the rail network named what?",
+    "answer": {
+      "answer_type": [
+        "Entity"
+      ],
+      "answer_argument": [
+        "m.04rydm"
+      ],
+      "entity_name": [
+        "TransAdelaide"
+      ]
+    },
+    "function": "none",
+    "num_node": 2,
+    "num_edge": 1,
+    "graph_query": {
+      "nodes": {
+        "nid": [
+          0,
+          1
+        ],
+        "node_type": [
+          "class",
+          "entity"
+        ],
+        "id": [
+          "rail.rail_network",
+          "m.03qcvdj"
+        ],
+        "class": [
+          "rail.rail_network",
+          "rail.railway"
+        ],
+        "friendly_name": [
+          "Rail network",
+          "Semaphore railway line"
+        ],
+        "question_node": [
+          1,
+          0
+        ],
+        "function": [
+          "none",
+          "none"
+        ]
+      },
+      "edges": {
+        "start": [
+          0
+        ],
+        "end": [
+          1
+        ],
+        "relation": [
+          "rail.rail_network.railways"
+        ],
+        "friendly_name": [
+          "Railways in this network"
+        ]
+      }
+    },
+    "sparql_query": "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX : <http://rdf.freebase.com/ns/> \nSELECT (?x0 AS ?value) WHERE {\nSELECT DISTINCT ?x0  WHERE { \n?x0 :type.object.type :rail.rail_network . \nVALUES ?x1 { :m.03qcvdj } \n?x0 :rail.rail_network.railways ?x1 . \nFILTER ( ?x0 != ?x1  )\n}\n}",
+    "domains": [
+      "rail"
+    ],
+    "level": "zero-shot",
+    "s_expression": "(AND rail.rail_network (JOIN rail.rail_network.railways m.03qcvdj))"
+  }
+]

@@ -5,7 +5,6 @@ Streamlit's server module is mocked so the tests run without a live
 Streamlit instance.  The DynBench backend is also mocked so no real
 HTTP requests are made.
 """
-import importlib
 import json
 import os
 import sys
@@ -390,6 +389,235 @@ class TestModelsHandler(tornado.testing.AsyncHTTPTestCase):
         with patch.object(_api, "_AVAILABLE_MODELS", ["mock-model"]):
             resp = self.fetch("/api/models")
         self.assertEqual(json.loads(resp.body), ["mock-model"])
+
+
+# ---------------------------------------------------------------------------
+# TransformBenchmarkHandler — POST /api/transform-benchmark (batch API)
+# ---------------------------------------------------------------------------
+
+_QALD_FILE = json.dumps({
+    "questions": [
+        {
+            "id": str(i),
+            "question": [{"language": "en", "string": f"Question {i}?"}],
+            "query": {"sparql": f"SELECT ?x WHERE {{ ?x wdt:P{i} ?y }}"},
+        }
+        for i in range(1, 4)  # 3 pairs
+    ]
+}).encode()
+
+
+def _multipart(filename: str, content: bytes, fields: dict | None = None):
+    """Build a multipart/form-data body with a 'file' part and extra fields."""
+    boundary = "testboundary123"
+    parts = []
+    for name, value in (fields or {}).items():
+        parts.append(
+            f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"'
+            f"\r\n\r\n{value}\r\n".encode()
+        )
+    parts.append(
+        f'--{boundary}\r\nContent-Disposition: form-data; name="file"; '
+        f'filename="{filename}"\r\nContent-Type: application/octet-stream'
+        "\r\n\r\n".encode() + content + b"\r\n"
+    )
+    parts.append(f"--{boundary}--\r\n".encode())
+    body = b"".join(parts)
+    return body, f"multipart/form-data; boundary={boundary}"
+
+
+class _BenchmarkHandlerTestBase(tornado.testing.AsyncHTTPTestCase):
+    def get_app(self):
+        return tornado.web.Application([
+            (r"/api/transform-benchmark", _api.TransformBenchmarkHandler),
+        ])
+
+
+class TestTransformBenchmarkBadRequest(_BenchmarkHandlerTestBase):
+    def test_no_file_returns_400(self):
+        resp = self.fetch("/api/transform-benchmark?model=gpt-4o", method="POST", body=b"")
+        self.assertEqual(resp.code, 400)
+        self.assertIn("No benchmark file", json.loads(resp.body)["error"])
+
+    def test_raw_body_without_filename_returns_400(self):
+        resp = self.fetch("/api/transform-benchmark?model=gpt-4o",
+                          method="POST", body=_QALD_FILE)
+        self.assertEqual(resp.code, 400)
+        self.assertIn("filename", json.loads(resp.body)["error"])
+
+    def test_missing_model_returns_400(self):
+        body, ctype = _multipart("qald.json", _QALD_FILE)
+        resp = self.fetch("/api/transform-benchmark", method="POST", body=body,
+                          headers={"Content-Type": ctype})
+        self.assertEqual(resp.code, 400)
+        self.assertIn("model", json.loads(resp.body)["error"])
+
+    def test_invalid_limit_returns_400(self):
+        body, ctype = _multipart("qald.json", _QALD_FILE)
+        resp = self.fetch("/api/transform-benchmark?model=gpt-4o&limit=-3",
+                          method="POST", body=body, headers={"Content-Type": ctype})
+        self.assertEqual(resp.code, 400)
+        self.assertIn("limit", json.loads(resp.body)["error"])
+
+    def test_invalid_response_mode_returns_400(self):
+        body, ctype = _multipart("qald.json", _QALD_FILE)
+        resp = self.fetch("/api/transform-benchmark?model=gpt-4o&response=xml",
+                          method="POST", body=body, headers={"Content-Type": ctype})
+        self.assertEqual(resp.code, 400)
+        self.assertIn("response", json.loads(resp.body)["error"])
+
+    def test_unrecognized_format_returns_400(self):
+        body, ctype = _multipart("notes.txt", b"plain text, no benchmark structure")
+        resp = self.fetch("/api/transform-benchmark?model=gpt-4o", method="POST",
+                          body=body, headers={"Content-Type": ctype})
+        self.assertEqual(resp.code, 400)
+        self.assertIn("Unsupported", json.loads(resp.body)["error"])
+
+    def test_get_serves_swagger_ui(self):
+        resp = self.fetch("/api/transform-benchmark")
+        self.assertEqual(resp.code, 200)
+        self.assertIn(b"swagger-ui", resp.body)
+
+    def test_check_xsrf_cookie_is_overridden(self):
+        self.assertTrue(callable(_api.TransformBenchmarkHandler.check_xsrf_cookie))
+        _api.TransformBenchmarkHandler.check_xsrf_cookie(
+            object.__new__(_api.TransformBenchmarkHandler)
+        )
+
+
+def _batch_backend_success(url, question, query, model, complexity, language,
+                           endpoint=None):
+    return (
+        {
+            "transformed_question": f"NEW {question}",
+            "transformed_query": f"NEW {query}",
+            "selected_replace": {"old_entity": "wd:Q1", "old_label": "old"},
+        },
+        None,
+    )
+
+
+class TestTransformBenchmarkSuccess(_BenchmarkHandlerTestBase):
+    def test_json_report_multipart(self):
+        with patch.object(_api, "call_dynbench", side_effect=_batch_backend_success):
+            body, ctype = _multipart("qald.json", _QALD_FILE)
+            resp = self.fetch("/api/transform-benchmark?model=gpt-4o&limit=2",
+                              method="POST", body=body, headers={"Content-Type": ctype})
+        self.assertEqual(resp.code, 200)
+        report = json.loads(resp.body)
+        self.assertEqual(report["format"], "QALD JSON")
+        self.assertEqual(report["total_pairs"], 3)
+        self.assertEqual(report["processed"], 2)  # limit respected
+        self.assertEqual(report["succeeded"], 2)
+        self.assertEqual(report["failed"], 0)
+        first = report["results"][0]
+        self.assertEqual(first["id"], "1")
+        self.assertEqual(first["question"], "Question 1?")
+        self.assertEqual(first["transformed_question"], "NEW Question 1?")
+        self.assertIn("selected_replace", first)
+
+    def test_limit_zero_processes_all(self):
+        with patch.object(_api, "call_dynbench", side_effect=_batch_backend_success) as mock:
+            body, ctype = _multipart("qald.json", _QALD_FILE)
+            resp = self.fetch("/api/transform-benchmark?model=gpt-4o&limit=0",
+                              method="POST", body=body, headers={"Content-Type": ctype})
+        self.assertEqual(json.loads(resp.body)["processed"], 3)
+        self.assertEqual(mock.call_count, 3)
+
+    def test_raw_body_with_filename_param(self):
+        with patch.object(_api, "call_dynbench", side_effect=_batch_backend_success):
+            resp = self.fetch(
+                "/api/transform-benchmark?model=gpt-4o&filename=qald.json&limit=1",
+                method="POST", body=_QALD_FILE,
+            )
+        self.assertEqual(resp.code, 200)
+        self.assertEqual(json.loads(resp.body)["format"], "QALD JSON")
+
+    def test_form_fields_accepted_for_parameters(self):
+        with patch.object(_api, "call_dynbench", side_effect=_batch_backend_success) as mock:
+            body, ctype = _multipart(
+                "qald.json", _QALD_FILE,
+                fields={"model": "llama3", "complexity": "hard", "language": "de", "limit": "1"},
+            )
+            resp = self.fetch("/api/transform-benchmark", method="POST", body=body,
+                              headers={"Content-Type": ctype})
+        self.assertEqual(resp.code, 200)
+        args = mock.call_args.args
+        self.assertEqual(args[3], "llama3")
+        self.assertEqual(args[4], "hard")
+        self.assertEqual(args[5], "de")
+
+    def test_response_file_returns_same_format_export(self):
+        with patch.object(_api, "call_dynbench", side_effect=_batch_backend_success):
+            body, ctype = _multipart("qald.json", _QALD_FILE)
+            resp = self.fetch(
+                "/api/transform-benchmark?model=gpt-4o&limit=2&response=file",
+                method="POST", body=body, headers={"Content-Type": ctype})
+        self.assertEqual(resp.code, 200)
+        self.assertIn("application/json", resp.headers.get("Content-Type", ""))
+        self.assertIn("qald-transformed.json", resp.headers.get("Content-Disposition", ""))
+        exported = json.loads(resp.body)
+        self.assertEqual(len(exported["questions"]), 2)
+        self.assertEqual(
+            exported["questions"][0]["question"][0]["string"], "NEW Question 1?"
+        )
+        self.assertTrue(
+            exported["questions"][0]["query"]["sparql"].startswith("NEW SELECT")
+        )
+
+    def test_endpoint_parameter_is_forwarded_to_backend(self):
+        with patch.object(_api, "call_dynbench", side_effect=_batch_backend_success) as mock:
+            body, ctype = _multipart("qald.json", _QALD_FILE)
+            resp = self.fetch(
+                "/api/transform-benchmark?model=gpt-4o&limit=1"
+                "&endpoint=https%3A%2F%2Fdbpedia.org%2Fsparql",
+                method="POST", body=body, headers={"Content-Type": ctype})
+        self.assertEqual(resp.code, 200)
+        self.assertEqual(mock.call_args.kwargs.get("endpoint"), "https://dbpedia.org/sparql")
+
+    def test_no_endpoint_means_none(self):
+        with patch.object(_api, "call_dynbench", side_effect=_batch_backend_success) as mock:
+            body, ctype = _multipart("qald.json", _QALD_FILE)
+            self.fetch("/api/transform-benchmark?model=gpt-4o&limit=1",
+                       method="POST", body=body, headers={"Content-Type": ctype})
+        self.assertIsNone(mock.call_args.kwargs.get("endpoint"))
+
+    def test_per_pair_backend_failure_is_reported_not_fatal(self):
+        calls = {"n": 0}
+
+        def flaky(url, question, query, model, complexity, language, endpoint=None):
+            calls["n"] += 1
+            if calls["n"] == 2:
+                return None, "HTTP 503: Service Unavailable"
+            return _batch_backend_success(url, question, query, model, complexity, language)
+
+        with patch.object(_api, "call_dynbench", side_effect=flaky):
+            body, ctype = _multipart("qald.json", _QALD_FILE)
+            resp = self.fetch("/api/transform-benchmark?model=gpt-4o&limit=3",
+                              method="POST", body=body, headers={"Content-Type": ctype})
+        self.assertEqual(resp.code, 200)
+        report = json.loads(resp.body)
+        self.assertEqual(report["succeeded"], 2)
+        self.assertEqual(report["failed"], 1)
+        self.assertIn("HTTP 503", report["results"][1]["error"])
+        self.assertNotIn("transformed_question", report["results"][1])
+
+
+class TestOpenApiSpecIncludesBenchmarkPath(tornado.testing.AsyncHTTPTestCase):
+    def get_app(self):
+        return tornado.web.Application([
+            (r"/api/openapi\.json", _api.OpenApiSpecHandler),
+        ])
+
+    def test_spec_contains_benchmark_path(self):
+        spec = json.loads(self.fetch("/api/openapi.json").body)
+        self.assertIn("/api/transform-benchmark", spec["paths"])
+
+    def test_benchmark_path_documents_formats(self):
+        spec = json.loads(self.fetch("/api/openapi.json").body)
+        desc = spec["paths"]["/api/transform-benchmark"]["post"]["description"]
+        self.assertIn("QALD JSON", desc)
+        self.assertIn("LC-QuAD 2.0", desc)
 
 
 if __name__ == "__main__":

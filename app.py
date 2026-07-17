@@ -2,11 +2,8 @@ import os
 import logging
 import json
 import random
-import requests
 
-from enum import Enum
 
-from decouple import config
 
 import colorlog
 import streamlit as st
@@ -22,12 +19,13 @@ from sample_selector import (
     build_samples_by_language,
 )
 from utils import (
-    call_dynbench, 
-    output_row, 
-    format_sparql, 
+    call_dynbench,
+    output_row,
+    format_sparql,
     submit_feedback,
     get_models
 )
+from batch_ui import render_batch_mode
 from settings import (
     PAGE_IMAGE,
     PAGE_TITLE,
@@ -36,6 +34,9 @@ from settings import (
     LANGUAGE_CODES,
     GITHUB_REPO,
     DEFAULT_QUERY_INPUT_HEIGHT,
+    DYNBENCH_URL,
+    TRANSFORM_URL,
+    FEEDBACK_URL,
 )
 
 handler = colorlog.StreamHandler()
@@ -88,9 +89,9 @@ st.set_page_config(
 
 # One-time running code
 if 'dyn_base_url' not in st.session_state:
-    st.session_state.dyn_base_url  = config('DYNBENCH')
-    st.session_state.transform_url = config('DYNBENCH')+'/transform'
-    st.session_state.feedback_url  = config('DYNBENCH')+'/feedback'
+    st.session_state.dyn_base_url  = DYNBENCH_URL
+    st.session_state.transform_url = TRANSFORM_URL
+    st.session_state.feedback_url  = FEEDBACK_URL
 
     st.session_state.models_list = get_models()
 
@@ -125,12 +126,6 @@ if 'dyn_base_url' not in st.session_state:
     # No pre-selection: inputs start empty until params or button set a record
     st.session_state.random_record = None
 
-
-st.set_page_config(
-    layout="wide",
-    page_title=PAGE_TITLE,
-    page_icon=Image.open(PAGE_IMAGE),
-)
 
 with (
     open("css/style_menu_logo.css") as f,
@@ -171,7 +166,164 @@ if not st.session_state.get("_lang_filter_manual", False):
     if st.session_state.get("_last_sample_language_param") != _sample_language:
         st.session_state["_last_sample_language_param"] = _sample_language
         if _sample_language is not None:
-            st.session_state[f"lang_filter_{_sample_language}"] = True   
+            st.session_state[f"lang_filter_{_sample_language}"] = True
+
+
+# === Usage modes ==============================================================
+# Selected in the sidebar (box below the logo), persisted in a cookie so the
+# preferred mode is activated by default on the next visit. On the very first
+# visit (no cookie) a centered selector is shown instead.
+
+_MODE_COOKIE = "dynbench_usage_mode"
+
+USAGE_MODES = {
+    "single": {"icon": "✍️", "label": "one question+query", "color": "blue", "hex": "#0068C9"},
+    "batch": {"icon": "📤", "label": "file upload", "color": "orange", "hex": "#D97C08"},
+    "api": {"icon": "🔌", "label": "RESTful API", "color": "green", "hex": "#21A366"},
+}
+
+if "usage_mode" not in st.session_state:
+    _cookie_mode = st.context.cookies.get(_MODE_COOKIE, "")
+    if _cookie_mode in USAGE_MODES:
+        st.session_state.usage_mode = _cookie_mode
+    elif _sample_id is not None or _sample_language is not None:
+        # deep links to sample pairs are single-pair links
+        st.session_state.usage_mode = "single"
+
+
+def _mode_option_label(mode: str) -> str:
+    m = USAGE_MODES[mode]
+    return f":{m['color']}[{m['icon']} {m['label']}]"
+
+
+def _usage_mode_radio_changed():
+    st.session_state.usage_mode = st.session_state._usage_mode_radio
+
+
+def render_title(mode=None):
+    """Page title; with a tag-like label showing the active usage mode."""
+    if mode is None:
+        st.title("DynBench: Question-Query Pair Generator")
+        return
+    m = USAGE_MODES[mode]
+    st.markdown(
+        "<h1>DynBench: Question-Query Pair Generator "
+        f"<span style='background:{m['hex']}1a; color:{m['hex']}; "
+        f"border:1.5px solid {m['hex']}; border-radius:1rem; padding:0.1em 0.6em; "
+        "font-size:0.45em; font-weight:600; vertical-align:middle; "
+        f"white-space:nowrap;'>{m['icon']} {m['label']}</span></h1>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_landing():
+    """First visit (no stored preference): centered usage-mode selector."""
+    render_title(None)
+    st.subheader(
+        "Generate new question-query pairs for overcoming memorization effects "
+        "during benchmarking LLM-based systems."
+    )
+    st.write("")
+    _, _mid, _ = st.columns([1, 1.1, 1])
+    with _mid:
+        with st.container(border=True):
+            st.markdown("### Usage mode")
+            st.write("How would you like to use DynBench?")
+            for _key in USAGE_MODES:
+                if st.button(
+                    _mode_option_label(_key),
+                    key=f"choose_{_key}",
+                    use_container_width=True,
+                ):
+                    st.session_state.usage_mode = _key
+                    st.rerun()
+            st.caption("Your choice is remembered for the next visit.")
+
+
+def render_api_mode():
+    """Usage mode 'RESTful API': point to the OpenAPI description of the API."""
+    _host = st.context.headers.get("Host", "localhost:8501")
+    _proto = st.context.headers.get("X-Forwarded-Proto", "http")
+    _base = f"{_proto}://{_host}"
+    st.write(
+        "Everything DynBench offers in the browser is also available to "
+        "programs through a REST API — both usage modes: transforming **one "
+        "question+query** pair (`POST /api/transform`) and processing a "
+        "complete benchmark **file upload** (`POST /api/transform-benchmark`, "
+        "with automatic benchmark-format detection and export in the format "
+        "of the uploaded file). The full API — endpoints, parameters, "
+        "request/response schemas and the supported benchmark formats — is "
+        "described by an OpenAPI 3.0 specification:"
+    )
+    col_docs, col_spec, _ = st.columns([1, 1, 1])
+    with col_docs:
+        st.link_button(
+            "📖 Interactive API documentation (Swagger UI)",
+            f"{_base}/api/transform",
+            use_container_width=True,
+        )
+    with col_spec:
+        st.link_button(
+            "📄 OpenAPI 3.0 specification (JSON)",
+            f"{_base}/api/openapi.json",
+            use_container_width=True,
+        )
+    st.markdown(
+        f"""
+| Endpoint | Purpose |
+|---|---|
+| `POST {_base}/api/transform` | transform one question+query pair |
+| `POST {_base}/api/transform-benchmark` | transform a complete benchmark file |
+| `GET {_base}/api/models` | list the available LLM models |
+| `GET {_base}/api/openapi.json` | machine-readable OpenAPI 3.0 specification |
+"""
+    )
+    st.markdown("**Examples**")
+    st.code(
+        f"""# transform one question+query pair
+curl -X POST '{_base}/api/transform' \\
+  -H 'Content-Type: application/json' \\
+  -d '{{"question": "What is …?", "query": "SELECT …", "model": "gpt-4o"}}'
+
+# transform the first 10 pairs of a benchmark file (any supported format)
+curl -X POST '{_base}/api/transform-benchmark?model=gpt-4o&limit=10' \\
+  -F 'file=@qald-9-test.json'
+
+# get the whole transformed benchmark back in the exact format of the upload
+curl -X POST '{_base}/api/transform-benchmark?model=gpt-4o&limit=0&response=file' \\
+  -F 'file=@qald-9-test.json' -o qald-9-test-transformed.json""",
+        language="bash",
+    )
+
+
+def page_footer():
+    """Menu JS, GitHub ribbon and the usage-mode cookie (all display modes)."""
+    with open("js/change_menu.js", "r") as f:
+        html(f"<script style='display:none'>{f.read()}</script>")
+
+    html(
+        """
+        <script>
+        github_ribbon = parent.window.document.createElement("div");
+        github_ribbon.innerHTML = '<a id="github-fork-ribbon" class="github-fork-ribbon right-bottom" href="%s" target="_blank" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>';
+        if (parent.window.document.getElementById("github-fork-ribbon") == null) {
+            parent.window.document.body.appendChild(github_ribbon.firstChild);
+        }
+        </script>
+        """
+        % (GITHUB_REPO,)
+    )
+
+    _mode = st.session_state.get("usage_mode")
+    if _mode in USAGE_MODES:
+        # persist the preferred usage mode for one year (component iframes are
+        # same-origin, so the cookie lands on the app's own origin)
+        html(
+            "<script>parent.document.cookie = "
+            f"'{_MODE_COOKIE}={_mode}; path=/; max-age=31536000; SameSite=Lax';"
+            "</script>",
+            height=0,
+        )
 
 
 # === Sidebar ===
@@ -195,69 +347,89 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
 
-    st.title("Settings")
+    _usage_mode = st.session_state.get("usage_mode")
 
-    # difficulty = st.radio(
-    #     "Select difficulty for the new question:",
-    #     ["easy", "normal", "hard", "random"],
-    #     help='**Options are:**\n- Easy: possible highest PageRank\n- Normal: same as the original\n- Hard: possible lowest PageRank\n- Random: any compatible',
-    # )
-    model = st.selectbox(
-        "Select LLM to generate new question:",
-        st.session_state.models_list,
-    )
-
-    difficulty = st.radio(
-        "Select difficulty for the entities in the generated question-query pair:",
-        ["easy", "similar", "hard", "random"],
-        index=1,
-        captions=[
-            "Select the compatible entity with highest PageRank",
-            "Use similar entity PageRanks in the generated question as in the reference question",
-            "Select the compatible entity with lowest PageRank",
-            "Select a compatible entity with a difficulty between the highest and lowest PageRank",
-        ],
-        help='A higher PageRank means a less difficult question-query pair as the entities are more commonly used in the language. The PageRank is calculated based on the Wikidata knowledge graph. Choose "Same as the original" to generate a question-query pair that should have the same difficulty as the original question-query pair. Choose "Any compatible" to generate a question-query pair that is compatible with the original question-query pair and has a difficulty between the highest and lowest PageRank (random).',
-    )
-    if difficulty == "similar":
-        difficulty = "normal"
-
-    language = st.selectbox(
-        "Select language for the to-be-generated question:",
-        list(LANGUAGES),
-    )
-
-    def _mark_lang_filter_manual():
-        st.session_state["_lang_filter_manual"] = True
-
-    st.subheader(
-        "Filter sample question-query pairs by language:",
-        help="Only selected languages will be considered when clicking 'Random sample'. If none are selected, all languages are used.",
-    )
-    for _display_name, _iso_code in st.session_state.available_sample_languages:
-        # if no sample_language is selected, check all languages
-        if _sample_language is None:
-            st.checkbox(
-                _display_name,
-                key=f"lang_filter_{_iso_code}",
-                on_change=_mark_lang_filter_manual,
-                value=True,
+    # Usage-mode selector below the logo. Hidden on the very first visit,
+    # where the selector is shown in the center of the page instead.
+    if _usage_mode is not None:
+        with st.container(border=True):
+            st.markdown("**Usage mode**")
+            st.radio(
+                "Usage mode",
+                list(USAGE_MODES),
+                index=list(USAGE_MODES).index(_usage_mode),
+                format_func=_mode_option_label,
+                key="_usage_mode_radio",
+                on_change=_usage_mode_radio_changed,
+                label_visibility="collapsed",
             )
-        else:
-            # if a sample_language is selected, check the corresponding language
-            if _sample_language == _iso_code:
+        _usage_mode = st.session_state.get("usage_mode")
+
+    model = None
+    difficulty = None
+    language = None
+    if _usage_mode in ("single", "batch"):
+        st.title("Settings")
+
+        model = st.selectbox(
+            "Select LLM to generate new question:",
+            st.session_state.models_list,
+        )
+
+        _DIFFICULTY_ICONS = {"easy": "🍰", "similar": "⚖️", "hard": "🧐", "random": "🎲"}
+        difficulty = st.radio(
+            "Select difficulty for the entities in the generated question-query pair:",
+            ["easy", "similar", "hard", "random"],
+            index=1,
+            format_func=lambda d: f"{_DIFFICULTY_ICONS[d]} {d}",
+            captions=[
+                "Select the compatible entity with highest PageRank",
+                "Use similar entity PageRanks in the generated question as in the reference question",
+                "Select the compatible entity with lowest PageRank",
+                "Select a compatible entity with a difficulty between the highest and lowest PageRank",
+            ],
+            help='A higher PageRank means a less difficult question-query pair as the entities are more commonly used in the language. The PageRank is calculated based on the Wikidata knowledge graph. Choose "Same as the original" to generate a question-query pair that should have the same difficulty as the original question-query pair. Choose "Any compatible" to generate a question-query pair that is compatible with the original question-query pair and has a difficulty between the highest and lowest PageRank (random).',
+        )
+        if difficulty == "similar":
+            difficulty = "normal"
+
+        language = st.selectbox(
+            "Select language for the to-be-generated question:",
+            list(LANGUAGES),
+        )
+
+    if _usage_mode == "single":
+        def _mark_lang_filter_manual():
+            st.session_state["_lang_filter_manual"] = True
+
+        st.subheader(
+            "Filter sample question-query pairs by language:",
+            help="Only selected languages will be considered when clicking 'Random sample'. If none are selected, all languages are used.",
+        )
+        for _display_name, _iso_code in st.session_state.available_sample_languages:
+            # if no sample_language is selected, check all languages
+            if _sample_language is None:
                 st.checkbox(
                     _display_name,
                     key=f"lang_filter_{_iso_code}",
                     on_change=_mark_lang_filter_manual,
+                    value=True,
                 )
             else:
-                st.checkbox(
-                    _display_name,
-                    key=f"lang_filter_{_iso_code}",
-                    on_change=_mark_lang_filter_manual,
-                    value=False,
-                )
+                # if a sample_language is selected, check the corresponding language
+                if _sample_language == _iso_code:
+                    st.checkbox(
+                        _display_name,
+                        key=f"lang_filter_{_iso_code}",
+                        on_change=_mark_lang_filter_manual,
+                    )
+                else:
+                    st.checkbox(
+                        _display_name,
+                        key=f"lang_filter_{_iso_code}",
+                        on_change=_mark_lang_filter_manual,
+                        value=False,
+                    )
 
     st.divider()
 
@@ -298,7 +470,30 @@ if _sample_id is not None or _effective_sample_language is not None:
             _effective_sample_language,
         )      
 
-st.title("DynBench: Question-Query Pair Generator")
+# === Mode dispatch ============================================================
+_usage_mode = st.session_state.get("usage_mode")
+
+if _usage_mode is None:
+    # first visit: selector in the center of the page, sidebar selector hidden
+    render_landing()
+    page_footer()
+    st.stop()
+
+render_title(_usage_mode)
+
+if _usage_mode == "api":
+    render_api_mode()
+    page_footer()
+    st.stop()
+
+if _usage_mode == "batch":
+    render_batch_mode(
+        st.session_state.transform_url, model, difficulty, LANGUAGES[language]
+    )
+    page_footer()
+    st.stop()
+
+# --- usage mode "one question+query" (fall-through) ---------------------------
 st.subheader(
     "Generate new question-query pairs for overcoming memorization effects during benchmarking LLM-based systems."
 )
@@ -622,20 +817,4 @@ if "new_question" in st.session_state:
                 st.text(str(_raw_value))
 
 
-with open("js/change_menu.js", "r") as f:
-    javascript = f.read()
-    html(f"<script style='display:none'>{javascript}</script>")
-
-
-html(
-"""
-<script>
-github_ribbon = parent.window.document.createElement("div");            
-github_ribbon.innerHTML = '<a id="github-fork-ribbon" class="github-fork-ribbon right-bottom" href="%s" target="_blank" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>';
-if (parent.window.document.getElementById("github-fork-ribbon") == null) {
-    parent.window.document.body.appendChild(github_ribbon.firstChild);
-}
-</script>
-"""
-% (GITHUB_REPO,)
-)
+page_footer()

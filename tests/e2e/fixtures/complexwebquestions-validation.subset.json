@@ -1,0 +1,46 @@
+[
+  {
+    "ID": "WebQTrn-1430_ac053cda0a7424c48e4809c71171fbed",
+    "answers": {
+      "aliases": [
+        []
+      ],
+      "answer": [
+        "Muhammad Zia-ul-Haq"
+      ],
+      "answer_id": [
+        "m.01j5_1"
+      ]
+    },
+    "composition_answer": "pakistan",
+    "compositionality_type": "composition",
+    "created": "2018-02-12T22:17:21",
+    "machine_question": "who was the president of the country that contains Azad Kashmir in 1980",
+    "question": "Who was the president in 1980 of the country that has Azad Kashmir?",
+    "sparql": "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ?c)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\n?c ns:location.country.administrative_divisions ns:m.010vz . \n?c ns:government.governmental_jurisdiction.governing_officials ?y .\n?y ns:government.government_position_held.office_holder ?x .\n?y ns:government.government_position_held.basic_title ns:m.060c4 .\nFILTER(NOT EXISTS {?y ns:government.government_position_held.from ?sk0} || \nEXISTS {?y ns:government.government_position_held.from ?sk1 . \nFILTER(xsd:datetime(?sk1) <= \"1980-12-31\"^^xsd:dateTime) })\nFILTER(NOT EXISTS {?y ns:government.government_position_held.to ?sk2} || \nEXISTS {?y ns:government.government_position_held.to ?sk3 . \nFILTER(xsd:datetime(?sk3) >= \"1980-01-01\"^^xsd:dateTime) })\n}\n",
+    "webqsp_ID": "WebQTrn-1430",
+    "webqsp_question": "who was the president of pakistan in 1980"
+  },
+  {
+    "ID": "WebQTrn-2505_eba9c2e29a1198e8b56c2f7e4210638b",
+    "answers": {
+      "aliases": [
+        []
+      ],
+      "answer": [
+        "Vanderbilt University Mr. Commodore"
+      ],
+      "answer_id": [
+        "m.05k6hxh"
+      ]
+    },
+    "composition_answer": "vanderbilt university",
+    "compositionality_type": "composition",
+    "created": "2018-02-13T00:03:35",
+    "machine_question": "what is the organiztion leadership has a person named Nicholas S. Zeppos mascot",
+    "question": "What is the mascot of the team that has Nicholas S. Zeppos as its leader?",
+    "sparql": "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ?c)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\n?c ns:organization.organization.leadership ?k .\n?k ns:organization.leadership.person ns:m.02vymvp . \n?c ns:education.educational_institution.mascot ?x .\n}\n",
+    "webqsp_ID": "WebQTrn-2505",
+    "webqsp_question": "what is vanderbilt university mascot"
+  }
+]

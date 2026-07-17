@@ -1,0 +1,262 @@
+[
+  {
+    "uid": 0,
+    "question_text": "Что может вызвать цунами?",
+    "query": "SELECT ?answer \nWHERE {\n  wd:Q8070 wdt:P828 ?answer\n}",
+    "answer_text": "Землетрясение",
+    "question_uris": [
+      "http://www.wikidata.org/entity/Q8070"
+    ],
+    "question_props": [
+      "wdt:P828"
+    ],
+    "answers": [
+      {
+        "type": "uri",
+        "label": "землетрясение",
+        "value": "http://www.wikidata.org/entity/Q7944",
+        "wd_names": {
+          "ru": [
+            "землетрясение",
+            "җир тетрәве"
+          ],
+          "en": [
+            "seism",
+            "earthquake",
+            "seismic activity",
+            "fore shocks",
+            "tremor",
+            "earthquakes",
+            "earth quake",
+            "earthtemblor",
+            "foreshock",
+            "aftershock",
+            "quake",
+            "temblor",
+            "earth temblor",
+            "foreshocks",
+            "after shocks",
+            "earth quakes",
+            "after shock",
+            "earthtremor",
+            "convulsion",
+            "earth tremor",
+            "shock",
+            "fore shock",
+            "aftershocks"
+          ]
+        },
+        "wp_names": [
+          "землетрясениям"
+        ]
+      },
+      {
+        "type": "uri",
+        "label": "метеорит",
+        "value": "http://www.wikidata.org/entity/Q60186",
+        "wd_names": {
+          "ru": [
+            "метеорит",
+            "Метеориты",
+            "Аэролиты"
+          ],
+          "en": [
+            "shooting star",
+            "meteorite"
+          ]
+        },
+        "wp_names": []
+      },
+      {
+        "type": "uri",
+        "label": "оползень",
+        "value": "http://www.wikidata.org/entity/Q167903",
+        "wd_names": {
+          "ru": [
+            "оползень",
+            "оползни"
+          ],
+          "en": [
+            "Rock avalanche",
+            "landslide",
+            "landslip"
+          ]
+        },
+        "wp_names": [
+          "оползни",
+          "оползнями"
+        ]
+      },
+      {
+        "type": "uri",
+        "label": "Проект Seal",
+        "value": "http://www.wikidata.org/entity/Q2580904",
+        "wd_names": {
+          "ru": [
+            "Проект Seal"
+          ],
+          "en": [
+            "tsunami bomb"
+          ]
+        },
+        "wp_names": []
+      },
+      {
+        "type": "uri",
+        "label": "подводный оползень",
+        "value": "http://www.wikidata.org/entity/Q5975740",
+        "wd_names": {
+          "ru": [],
+          "en": [
+            "undersea landslide",
+            "submarine landslide",
+            "underwater landslide"
+          ]
+        },
+        "wp_names": []
+      },
+      {
+        "type": "uri",
+        "label": "извержение вулкана",
+        "value": "http://www.wikidata.org/entity/Q7692360",
+        "wd_names": {
+          "ru": [
+            "Фреатическое извержение",
+            "Вулканические извержения",
+            "Стромболианское извержение",
+            "извержение вулкана",
+            "Гавайское извержение",
+            "Газовое извержение",
+            "Вулканическое извержение",
+            "Пелейское извержение"
+          ],
+          "en": [
+            "volcano eruption",
+            "volcanic eruption",
+            "eruption"
+          ]
+        },
+        "wp_names": [
+          "извержения вулкана"
+        ]
+      }
+    ],
+    "paragraphs_uids": {
+      "with_answer": [
+        35622
+      ],
+      "all_related": [
+        35622,
+        35623,
+        35624,
+        35625,
+        35626,
+        35632,
+        35633,
+        35634,
+        35635,
+        35636,
+        35637,
+        35638,
+        35639,
+        35640,
+        35641,
+        35642,
+        35643,
+        35644,
+        35645,
+        35646,
+        35647,
+        35648,
+        35649,
+        35650,
+        35651
+      ]
+    },
+    "tags": [
+      "1-hop"
+    ],
+    "RuBQ_version": "1.0",
+    "question_eng": "What can cause a tsunami?"
+  },
+  {
+    "uid": 1,
+    "question_text": "Кто написал роман «Хижина дяди Тома»?",
+    "query": "SELECT ?answer \nWHERE {\n  wd:Q2222 wdt:P50 ?answer\n}",
+    "answer_text": "Г. Бичер-Стоу",
+    "question_uris": [
+      "http://www.wikidata.org/entity/Q2222"
+    ],
+    "question_props": [
+      "wdt:P50"
+    ],
+    "answers": [
+      {
+        "type": "uri",
+        "label": "Гарриет Бичер-Стоу",
+        "value": "http://www.wikidata.org/entity/Q102513",
+        "wd_names": {
+          "ru": [
+            "Стоу Гарриет Бичер",
+            "Бичер-Стоу Гарриет",
+            "Гарриет Бичер-Стоу",
+            "Бичер Стоу",
+            "Гарриет Стоу",
+            "Бичер-Стоу",
+            "Бичер-Стоу Г.",
+            "Бичер-Стоу Гарриэт",
+            "Гарриет Элизабет Бичер-Стоу",
+            "Стоу, Гарриет Бичер",
+            "Бичер-Стоу, Гарриэт",
+            "Гарриет Бичер Стоу"
+          ],
+          "en": [
+            "Christopher Crowfield",
+            "Harriet Elizabeth Beecher Stowe",
+            "Enrieta Elizabeth Beecher Stowe",
+            "Harriet Beecher Stowe"
+          ]
+        },
+        "wp_names": [
+          "Гарриет Бичер-Стоу"
+        ]
+      }
+    ],
+    "paragraphs_uids": {
+      "with_answer": [
+        35652
+      ],
+      "all_related": [
+        35652,
+        35653,
+        35654,
+        35655,
+        35656,
+        35657,
+        35658,
+        35659,
+        35660,
+        35661,
+        35662,
+        35663,
+        35664,
+        35665,
+        35666,
+        35667,
+        35668,
+        35669,
+        35670,
+        35671,
+        35672,
+        35673,
+        35674,
+        35675
+      ]
+    },
+    "tags": [
+      "1-hop"
+    ],
+    "RuBQ_version": "1.0",
+    "question_eng": "Who wrote the novel \"uncle Tom's Cabin\"?"
+  }
+]

@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<dataset id="qald-4_biomedical_train">
+  <question id="1">
+    <string lang="en">Which diseases is Cetuximab used for?</string>
+    <query>
+PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;
+SELECT DISTINCT ?v
+WHERE {
+        ?x rdfs:label ?l.
+        FILTER(REGEX(?l,'Cetuximab','i')).
+        ?x &lt;http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugbank/possibleDiseaseTarget&gt; ?v.
+        ?v a &lt;http://www4.wiwiss.fu-berlin.de/diseasome/resource/diseasome/diseases&gt;.
+}
+
+</query>
+  </question>
+  <question id="2">
+    <string lang="en">What are the diseases caused by Valdecoxib?</string>
+    <query>
+PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;
+SELECT DISTINCT ?x
+WHERE {
+        ?v1 rdfs:label ?l.
+        FILTER(REGEX(?l,'Valdecoxib','i')).
+        ?v2 &lt;http://www.w3.org/2002/07/owl#sameAs&gt; ?v1.
+        ?v2 &lt;http://www4.wiwiss.fu-berlin.de/sider/resource/sider/sideEffect&gt; ?x.
+        ?x a ?c.
+        ?c &lt;http://www.w3.org/2002/07/owl#sameAs&gt; &lt;http://www4.wiwiss.fu-berlin.de/diseasome/resource/diseasome/diseases&gt;.
+}
+
+</query>
+  </question>
+</dataset>
