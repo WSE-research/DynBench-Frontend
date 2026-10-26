@@ -11,6 +11,12 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
+# Imported before _load_api_with_mocks() so that requests (and http.cookiejar)
+# are not first imported inside its patch.dict(sys.modules) block: on exit that
+# block drops every module imported within it, and a later re-import of
+# requests then mixes two http.cookiejar copies (requests >= 2.34 raises
+# "ValueError: You can only merge into CookieJar" in the AppTest-based tests).
+import requests  # noqa: F401
 import tornado.testing
 import tornado.web
 
